@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>MKLM3D</title>
-<!-- version : caméra U1 (une image par seconde) + bouton Récupérée -->
+<!-- version : caméra U1 (une image par seconde, démarrage rapide) + bouton Récupérée -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -231,7 +231,7 @@ function ouvrirCamera(nom) {
   document.getElementById("camImg").style.display = "none";
   document.getElementById("camAttente").style.display = "";
   document.getElementById("camAttente").textContent = "Connexion à la caméra…";
-  document.getElementById("camInfo").textContent = "La première image peut mettre jusqu'à 20 secondes à arriver.";
+  document.getElementById("camInfo").textContent = "La première image arrive en 5 secondes environ.";
   document.getElementById("camera").className = "ouvert";
   imageCamera();
 }
@@ -252,6 +252,11 @@ function imageCamera() {
       img.src = "data:image/jpeg;base64," + d.image; img.style.display = "";
       document.getElementById("camAttente").style.display = "none";
       info.textContent = "Image de " + hm(d.ms) + ":" + ("0" + new Date(d.ms).getSeconds()).slice(-2) + " · une nouvelle chaque seconde environ";
+    } else if (d && d.image && img.style.display === "none") {
+      // en attendant le direct : la dernière image connue, tout de suite
+      img.src = "data:image/jpeg;base64," + d.image; img.style.display = "";
+      document.getElementById("camAttente").style.display = "none";
+      info.textContent = "Dernière image (" + hm(d.ms) + ") · le direct arrive dans quelques secondes…";
     } else if (Date.now() - CAM.debut > 40000) {
       info.textContent = "Pas d'image : le PC est peut-être éteint, le Carnet fermé, ou l'imprimante éteinte.";
       if (d && d.image) { img.src = "data:image/jpeg;base64," + d.image; img.style.display = ""; document.getElementById("camAttente").style.display = "none"; }
