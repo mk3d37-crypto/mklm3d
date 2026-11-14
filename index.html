@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>MKLM3D</title>
+<!-- version : caméra U1 (une image par seconde) + bouton Récupérée -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -138,7 +139,7 @@ function dessiner() {
       }
     }
     if (m.prochaine) s += '<div class="prochaine">Ensuite : ' + esc(m.prochaine) + '</div>';
-    if (m.camera) s += '<button class="cam" onclick="ouvrirCamera(\'' + esc(m.court) + '\')">Voir la caméra</button>';
+    if (m.camera || m.nom === "Snapmaker U1") s += '<button class="cam" onclick="ouvrirCamera(\'' + esc(m.court) + '\')">Voir la caméra</button>';
     return s + "</div>";
   }).join("") + '</div>';
   h += "<h2>Aujourd'hui</h2>" + ((e.jour && e.jour.length) ? e.jour.map(tache).join("") : '<div class="vide">Rien de prévu, tout est à jour.</div>');
