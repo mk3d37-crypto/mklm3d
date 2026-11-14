@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>MKLM3D</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MKLM3D">
+<meta name="application-name" content="MKLM3D">
+<meta name="theme-color" content="#05080C">
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+:root{--fond:#05080C;--panneau:#0A1118;--panneau2:#111C28;--bord:#1B2B3B;--texte:#E4F0FF;--doux:#7B91A8;
+--accent:#FF8A1F;--retard:#FF4D6D;--jaune:#FFD23F;--ok:#5BE38F}
+*{box-sizing:border-box}
+html{background:var(--fond)}
+html,body{margin:0;color:var(--texte);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{background:var(--fond);min-height:100vh;
+padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
+h1{font-size:20px;letter-spacing:.12em;margin:0;text-transform:uppercase}
+h1 span{color:var(--accent)}
+.maj{font-size:12px;color:var(--doux);text-align:right}
+.maj.vieux{color:var(--jaune)}
+button{background:var(--panneau2);color:var(--texte);border:1px solid var(--accent);border-radius:8px;font:inherit;font-size:14px;padding:9px 16px}
+button:disabled{opacity:.7}
+h2{font-size:11px;letter-spacing:.18em;color:var(--doux);text-transform:uppercase;margin:22px 0 8px}
+.alerte{background:#2a2108;border:1px solid var(--jaune);color:var(--jaune);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px}
+.erreur{background:#2a0d14;border-color:var(--retard);color:#ffb3c0}
+.resume{display:flex;flex-wrap:wrap;gap:6px}
+.puce{border:1px solid var(--accent);border-radius:999px;padding:5px 11px;font-size:13px}
+.machines{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m{background:var(--panneau);border:1px solid var(--bord);border-radius:12px;padding:12px;min-height:92px}
+.m.actif{border-color:var(--c)}
+.m .nom{display:flex;align-items:center;gap:7px;font-weight:600;font-size:15px}
+.pt{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.m .etat{font-size:13px;color:var(--doux);margin-top:6px}
+.m .client{font-size:13px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barre{height:6px;background:var(--panneau2);border-radius:3px;margin-top:8px;overflow:hidden}
+.barre i{display:block;height:100%;background:var(--c);border-radius:3px}
+.pct{font-size:22px;font-weight:700;margin-top:4px}
+.recup{color:var(--jaune);font-weight:600}
+.prochaine{font-size:12px;color:var(--doux);margin-top:6px}
+.t{display:flex;gap:10px;align-items:flex-start;background:var(--panneau);border:1px solid var(--bord);border-left:4px solid var(--c);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.t .h{font-weight:700;min-width:48px;font-variant-numeric:tabular-nums}
+.t .quoi{font-size:11px;color:var(--doux);margin-top:2px}
+.t.retard{border-color:var(--retard);border-left-color:var(--retard)}
+.t.retard .h{color:var(--retard)}
+.vide{color:var(--doux);font-size:14px;padding:4px 0}
+.jour{font-weight:600;margin:12px 0 6px}
+.bas{text-align:center;margin-top:24px}
+.aide{color:var(--doux);font-size:14px;line-height:1.5}
+</style>
+</head>
+<body>
+<header><h1>MKLM<span>3D</span></h1><div><div class="maj" id="maj"></div><div class="maj" id="lu"></div></div></header>
+<div id="alerte"></div>
+<div id="contenu"></div>
+<p class="bas"><button id="bouton" onclick="actualiser()">Actualiser</button></p>
+<script>
+// La page ne contient aucune donnée : elle va les chercher chez Google (ton script), avec la clé secrète
+// qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
+var CONFIG = lireConfig();
+var ETAT = null, LU = null;
+
+function lireConfig() {
+  var c = {};
+  (location.hash || "").replace(/^#/, "").split("&").forEach(function (p) {
+    var i = p.indexOf("=");
+    if (i > 0) c[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1));
+  });
+  try {
+    if (c.u && c.k) localStorage.setItem("mklm3d", JSON.stringify({u: c.u, k: c.k}));
+    else { var s = JSON.parse(localStorage.getItem("mklm3d") || "null"); if (s) { c.u = s.u; c.k = s.k; } }
+  } catch (e) {}
+  return (c.u && c.k) ? {u: c.u, k: c.k} : null;
+}
+
+function esc(t) { return String(t == null ? "" : t).replace(/[&<>"]/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]; }); }
+function hm(ms) { var d = new Date(ms); return d.getHours() + "h" + ("0" + d.getMinutes()).slice(-2); }
+function duree(min) { min = Math.max(0, Math.round(min)); if (min < 60) return min + " min"; var h = Math.floor(min / 60), m = min % 60; return h + " h" + (m ? " " + ("0" + m).slice(-2) : ""); }
+
+function tache(t) {
+  var sous = [t.machine ? esc(t.machine) : "", t.retard ? "en retard" : ""].filter(Boolean).join(" · ");
+  return '<div class="t' + (t.retard ? " retard" : "") + '" style="--c:' + esc(t.couleur) + '"><div class="h">' + esc(t.heure) +
+    '</div><div><div>' + (t.quoi ? esc(t.quoi) + " : " : "") + esc(t.client) + '</div>' + (sous ? '<div class="quoi">' + sous + '</div>' : "") + '</div></div>';
+}
+
+function dessiner() {
+  var alerte = document.getElementById("alerte");
+  if (!CONFIG) {
+    document.getElementById("contenu").innerHTML = '<p class="aide">Cette page a besoin de ton lien personnel.<br>' +
+      'Sur le PC : Carnet → Réglages → Carnet mobile (iPhone)… puis scanne le QR code avec l\'iPhone.</p>';
+    document.getElementById("bouton").style.display = "none";
+    return;
+  }
+  if (!ETAT) { document.getElementById("contenu").innerHTML = '<p class="aide">Chargement…</p>'; return; }
+  var now = Date.now(), e = ETAT, age = (now - e.maj) / 60000;
+  var maj = document.getElementById("maj");
+  maj.textContent = "mis à jour " + (age < 1 ? "à l'instant" : "il y a " + duree(age));
+  maj.className = "maj" + (age > 10 ? " vieux" : "");
+  document.getElementById("lu").textContent = LU ? "actualisée à " + hm(LU) : "";
+  if (age > 10 && !alerte.dataset.erreur) {
+    alerte.innerHTML = '<div class="alerte">Le Carnet n\'a rien envoyé depuis ' + duree(age) + ' (dernier envoi : ' + esc(e.maj_texte) + '). Le PC est peut-être éteint ou le Carnet fermé.</div>';
+  } else if (!alerte.dataset.erreur) { alerte.innerHTML = ""; }
+  var h = '<div class="resume">' + (e.resume || []).map(function (r) { return '<span class="puce">' + esc(r) + '</span>'; }).join("") + '</div>';
+  h += '<h2>Machines</h2><div class="machines">' + (e.machines || []).map(function (m) {
+    var s = '<div class="m' + (m.etat != "libre" ? " actif" : "") + '" style="--c:' + esc(m.couleur) + '"><div class="nom"><span class="pt"></span>' + esc(m.court) + '</div>';
+    if (m.etat == "libre") { s += '<div class="etat">libre</div>'; }
+    else {
+      var f = (m.lance && m.fin && m.fin > m.lance) ? Math.min(1, Math.max(0, (now - m.lance) / (m.fin - m.lance))) : 1;
+      if (f < 1) s += '<div class="pct">' + Math.round(f * 100) + ' %</div><div class="barre"><i style="width:' + (f * 100) + '%"></i></div>' +
+        '<div class="etat">fin vers ' + hm(m.fin) + ' · reste ' + duree((m.fin - now) / 60000) + '</div>';
+      else s += '<div class="pct recup">à récupérer</div><div class="barre"><i style="width:100%"></i></div>' + (m.fin ? '<div class="etat">fini à ' + hm(m.fin) + '</div>' : "");
+      s += '<div class="client">' + esc(m.client) + '</div>';
+    }
+    if (m.prochaine) s += '<div class="prochaine">Ensuite : ' + esc(m.prochaine) + '</div>';
+    return s + "</div>";
+  }).join("") + '</div>';
+  h += "<h2>Aujourd'hui</h2>" + ((e.jour && e.jour.length) ? e.jour.map(tache).join("") : '<div class="vide">Rien de prévu, tout est à jour.</div>');
+  if ((e.a_venir || []).length) {
+    h += "<h2>Les jours suivants</h2>" + e.a_venir.map(function (j) {
+      return '<div class="jour">' + esc(j.jour) + '</div>' + (j.taches.length ? j.taches.map(tache).join("") : '<div class="vide">rien de prévu</div>');
+    }).join("");
+  }
+  document.getElementById("contenu").innerHTML = h;
+}
+
+function adresse(extra) { return CONFIG.u + (CONFIG.u.indexOf("?") < 0 ? "?" : "&") + "cle=" + encodeURIComponent(CONFIG.k) + extra + "&t=" + Date.now(); }
+
+// 1er essai : lecture directe (sans les comptes Google du téléphone). 2e essai : JSONP.
+function charger(ok, ko) {
+  if (!CONFIG) { if (ko) ko(); return; }
+  var fini = false;
+  function reussi(d) {
+    if (fini) return; fini = true;
+    var alerte = document.getElementById("alerte");
+    if (d && d.ok === false) { alerte.dataset.erreur = "1"; alerte.innerHTML = '<div class="alerte erreur">Lien refusé par le script Google : rescanne le QR code depuis le Carnet.</div>'; if (ko) ko(); return; }
+    delete alerte.dataset.erreur;
+    if (d && d.etat) { ETAT = d.etat; LU = Date.now(); }
+    dessiner(); if (ok) ok();
+  }
+  function echec() {
+    if (fini) return; fini = true;
+    var alerte = document.getElementById("alerte");
+    alerte.dataset.erreur = "1";
+    alerte.innerHTML = '<div class="alerte erreur">Impossible de joindre Google pour le moment (pas de réseau ?). Réessaie avec « Actualiser ».</div>';
+    if (ko) ko();
+  }
+  function jsonp() {
+    var nom = "mk" + Date.now(), s = document.createElement("script");
+    window[nom] = function (d) { delete window[nom]; s.remove(); reussi(d); };
+    s.onerror = function () { s.remove(); echec(); };
+    s.src = adresse("&callback=" + nom);
+    document.head.appendChild(s);
+    setTimeout(echec, 15000);
+  }
+  try {
+    fetch(adresse("&format=json"), {credentials: "omit", cache: "no-store", redirect: "follow"})
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(reussi)
+      .catch(jsonp);
+  } catch (e) { jsonp(); }
+}
+
+function actualiser() {
+  var b = document.getElementById("bouton");
+  b.disabled = true; b.textContent = "Actualisation…";
+  charger(function () { b.disabled = false; b.textContent = "Actualisé ✓"; setTimeout(function () { b.textContent = "Actualiser"; }, 2500); },
+          function () { b.disabled = false; b.textContent = "Actualiser"; });
+}
+
+dessiner();
+charger();
+setInterval(dessiner, 30000);
+setInterval(function () { charger(); }, 60000);
+document.addEventListener("visibilitychange", function () { if (!document.hidden) charger(); });   // retour sur l'appli
+</script>
+</body>
+</html>
