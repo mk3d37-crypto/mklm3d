@@ -44,6 +44,9 @@ h2{font-size:11px;letter-spacing:.18em;color:var(--doux);text-transform:uppercas
 .barre i{display:block;height:100%;background:var(--c);border-radius:3px}
 .pct{font-size:22px;font-weight:700;margin-top:4px}
 .recup{color:var(--jaune);font-weight:600}
+.m button{width:100%;margin-top:10px;border-color:var(--ok);font-size:14px;padding:9px 6px}
+.m button.fort{background:var(--ok);color:#04130A;font-weight:700}
+.m .attente{font-size:12px;color:var(--ok);margin-top:10px}
 .prochaine{font-size:12px;color:var(--doux);margin-top:6px}
 .t{display:flex;gap:10px;align-items:flex-start;background:var(--panneau);border:1px solid var(--bord);border-left:4px solid var(--c);border-radius:10px;padding:10px 12px;margin-bottom:8px}
 .t .h{font-weight:700;min-width:48px;font-variant-numeric:tabular-nums}
@@ -117,6 +120,10 @@ function dessiner() {
         '<div class="etat">fin vers ' + hm(m.fin) + ' · reste ' + duree((m.fin - now) / 60000) + '</div>';
       else s += '<div class="pct recup">à récupérer</div><div class="barre"><i style="width:100%"></i></div>' + (m.fin ? '<div class="etat">fini à ' + hm(m.fin) + '</div>' : "");
       s += '<div class="client">' + esc(m.client) + '</div>';
+      if (m.id) {
+        if (ENVOYES[m.id]) s += '<div class="attente">✓ Récupération signalée. Le PC la prend en compte dans la minute.</div>';
+        else s += '<button class="' + (f < 1 ? "" : "fort") + '" onclick="recuperee(' + Number(m.id) + ')">Récupérée ✓</button>';
+      }
     }
     if (m.prochaine) s += '<div class="prochaine">Ensuite : ' + esc(m.prochaine) + '</div>';
     return s + "</div>";
@@ -141,7 +148,12 @@ function charger(ok, ko) {
     var alerte = document.getElementById("alerte");
     if (d && d.ok === false) { alerte.dataset.erreur = "1"; alerte.innerHTML = '<div class="alerte erreur">Lien refusé par le script Google : rescanne le QR code depuis le Carnet.</div>'; if (ko) ko(); return; }
     delete alerte.dataset.erreur;
-    if (d && d.etat) { ETAT = d.etat; LU = Date.now(); }
+    if (d && d.etat) {
+      ETAT = d.etat; LU = Date.now();
+      var encore = {};
+      (ETAT.machines || []).forEach(function (x) { if (x.id && ENVOYES[x.id] && Date.now() - ENVOYES[x.id] < 300000) encore[x.id] = ENVOYES[x.id]; });
+      ENVOYES = encore;
+    }
     dessiner(); if (ok) ok();
   }
   function echec() {
@@ -164,6 +176,36 @@ function charger(ok, ko) {
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(reussi)
       .catch(jsonp);
+  } catch (e) { jsonp(); }
+}
+
+// Bouton « Récupérée » : on prévient le script Google, le Carnet (PC) fait le reste dans la minute.
+var ENVOYES = {};
+function recuperee(id) {
+  var m = (ETAT.machines || []).filter(function (x) { return x.id === id; })[0];
+  if (!m) return;
+  var encore = (m.fin && Date.now() < m.fin) ? "\n\nAttention : d'après le Carnet, l'impression n'est pas encore finie." : "";
+  if (!confirm("Tu as bien récupéré « " + m.client + " » sur la " + m.court + " ?" + encore)) return;
+  var fini = false;
+  function ok(d) {
+    if (fini) return; fini = true;
+    if (d && d.ok === false) { alert("Le script Google a refusé : " + (d.erreur || "erreur") + "\nVérifie qu'il est bien à jour (nouvelle version déployée)."); return; }
+    ENVOYES[id] = Date.now(); dessiner();
+    setTimeout(function () { charger(); }, 20000); setTimeout(function () { charger(); }, 70000);
+  }
+  function ko() { if (fini) return; fini = true; alert("Impossible de joindre Google (pas de réseau ?). Réessaie."); }
+  function jsonp() {
+    var nom = "mka" + Date.now(), s = document.createElement("script");
+    window[nom] = function (d) { delete window[nom]; s.remove(); ok(d); };
+    s.onerror = function () { s.remove(); ko(); };
+    s.src = adresse("&action=recuperee&id=" + id + "&callback=" + nom);
+    document.head.appendChild(s);
+    setTimeout(ko, 15000);
+  }
+  try {
+    fetch(adresse("&action=recuperee&id=" + id), {credentials: "omit", cache: "no-store", redirect: "follow"})
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(ok).catch(jsonp);
   } catch (e) { jsonp(); }
 }
 
