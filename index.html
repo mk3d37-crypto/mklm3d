@@ -240,8 +240,9 @@ function fermerCamera() {
 }
 function imageCamera() {
   if (!CAM.ouvert || !CONFIG) return;
-  var fini = false;
-  function suite() { if (CAM.ouvert) CAM.minuterie = setTimeout(imageCamera, 3000); }
+  var fini = false, depart = Date.now();
+  // une demande par seconde (si Google met plus d'une seconde à répondre, la suivante part tout de suite après)
+  function suite() { if (CAM.ouvert) CAM.minuterie = setTimeout(imageCamera, Math.max(150, 1000 - (Date.now() - depart))); }
   function recu(d) {
     if (fini) return; fini = true;
     var info = document.getElementById("camInfo"), img = document.getElementById("camImg");
@@ -249,7 +250,7 @@ function imageCamera() {
     if (d && d.image && age < 90) {
       img.src = "data:image/jpeg;base64," + d.image; img.style.display = "";
       document.getElementById("camAttente").style.display = "none";
-      info.textContent = "Image de " + hm(d.ms) + ":" + ("0" + new Date(d.ms).getSeconds()).slice(-2) + " · une nouvelle toutes les 3 secondes environ";
+      info.textContent = "Image de " + hm(d.ms) + ":" + ("0" + new Date(d.ms).getSeconds()).slice(-2) + " · une nouvelle chaque seconde environ";
     } else if (Date.now() - CAM.debut > 40000) {
       info.textContent = "Pas d'image : le PC est peut-être éteint, le Carnet fermé, ou l'imprimante éteinte.";
       if (d && d.image) { img.src = "data:image/jpeg;base64," + d.image; img.style.display = ""; document.getElementById("camAttente").style.display = "none"; }
