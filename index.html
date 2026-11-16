@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>MKLM3D</title>
-<!-- version : caméra U1 (une image par seconde, démarrage rapide) + bouton Récupérée -->
+<!-- version : jours de repos (affichage + bouton Repos) · caméra U1 · bouton Récupérée -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -67,13 +67,46 @@ padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-ins
 .jour{font-weight:600;margin:12px 0 6px}
 .bas{text-align:center;margin-top:24px}
 .aide{color:var(--doux);font-size:14px;line-height:1.5}
+.repos{background:#141024;border:1px solid #8B7CF6;border-left:4px solid #8B7CF6;border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px}
+.repos b{color:#B9AEFF}
+.repos .quoi{font-size:12px;color:var(--doux);margin-top:2px}
+.lr{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.lr button{padding:6px 12px;font-size:13px;border-color:var(--retard);flex:none}
+.attente2{font-size:12px;color:var(--ok)}
+.bas button{margin:4px}
+#bRepos{border-color:#8B7CF6}
+#fRepos{position:fixed;inset:0;background:var(--fond);z-index:11;display:none;overflow:auto;
+padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+#fRepos.ouvert{display:block}
+#fRepos .tete{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#fRepos .tete b{font-size:17px;letter-spacing:.06em}
+#fRepos label{display:block;font-size:13px;color:var(--doux);margin:14px 0 6px}
+#fRepos input[type=date],#fRepos input[type=time],#fRepos input[type=text]{width:100%;background:var(--panneau2);color:var(--texte);
+border:1px solid var(--bord);border-radius:8px;padding:10px;font:inherit;font-size:16px;-webkit-appearance:none;min-height:44px}
+#fRepos .deux{display:flex;gap:10px;align-items:center}
+#fRepos .deux input{flex:1}
+#fRepos .coche{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:15px;color:var(--texte)}
+#fRepos .coche input{width:22px;height:22px}
+#fRepos .ok{width:100%;margin-top:20px;background:#8B7CF6;border-color:#8B7CF6;color:#0B0718;font-weight:700;padding:12px}
+#rErreur{color:#ffb3c0;font-size:13px;margin-top:10px}
 </style>
 </head>
 <body>
 <header><h1>MKLM<span>3D</span></h1><div><div class="maj" id="maj"></div><div class="maj" id="lu"></div></div></header>
 <div id="alerte"></div>
 <div id="contenu"></div>
-<p class="bas"><button id="bouton" onclick="actualiser()">Actualiser</button></p>
+<p class="bas"><button id="bRepos" onclick="ouvrirRepos()">☾ Repos</button><button id="bouton" onclick="actualiser()">Actualiser</button></p>
+<div id="fRepos"><div class="tete"><b>☾ Jour de repos</b><button onclick="fermerRepos()">Fermer</button></div>
+<div class="aide">Comme sur le PC : aucun devis ni aucune tâche n'est planifié ces jours-là.</div>
+<label for="rDu">Du</label><input type="date" id="rDu">
+<label for="rAu">Au (facultatif, pour plusieurs jours)</label><input type="date" id="rAu">
+<div class="coche"><input type="checkbox" id="rJournee" checked onchange="cocheJournee()"><span>Toute la journée</span></div>
+<div id="rHeures" style="display:none"><label>De quelle heure à quelle heure ?</label>
+<div class="deux"><input type="time" id="rH1" value="08:00"><span>à</span><input type="time" id="rH2" value="12:00"></div></div>
+<label for="rNote">Description (facultatif)</label><input type="text" id="rNote" maxlength="80" placeholder="ex. entretien des machines, rendez-vous…">
+<div id="rErreur"></div>
+<button class="ok" id="rOk" onclick="envoyerRepos()">Enregistrer le repos</button>
+<h2>Repos prévus</h2><div id="rListe"></div></div>
 <div id="camera"><div class="tete"><b id="camTitre">Caméra</b><button onclick="fermerCamera()">Fermer</button></div>
 <div class="cadre"><img id="camImg" alt=""><span id="camAttente" class="aide">Connexion à la caméra…</span></div>
 <div class="info" id="camInfo"></div></div>
@@ -112,6 +145,7 @@ function dessiner() {
     document.getElementById("contenu").innerHTML = '<p class="aide">Cette page a besoin de ton lien personnel.<br>' +
       'Sur le PC : Carnet → Réglages → Carnet mobile (iPhone)… puis scanne le QR code avec l\'iPhone.</p>';
     document.getElementById("bouton").style.display = "none";
+    document.getElementById("bRepos").style.display = "none";
     return;
   }
   if (!ETAT) { document.getElementById("contenu").innerHTML = '<p class="aide">Chargement…</p>'; return; }
@@ -142,13 +176,109 @@ function dessiner() {
     if (m.camera || m.nom === "Snapmaker U1") s += '<button class="cam" onclick="ouvrirCamera(\'' + esc(m.court) + '\')">Voir la caméra</button>';
     return s + "</div>";
   }).join("") + '</div>';
-  h += "<h2>Aujourd'hui</h2>" + ((e.jour && e.jour.length) ? e.jour.map(tache).join("") : '<div class="vide">Rien de prévu, tout est à jour.</div>');
+  var rAuj = reposDu(e.aujourdhui);
+  h += "<h2>Aujourd'hui</h2>" + (rAuj ? blocRepos(rAuj) : "") +
+    ((e.jour && e.jour.length) ? e.jour.map(tache).join("") : (rAuj ? "" : '<div class="vide">Rien de prévu, tout est à jour.</div>'));
   if ((e.a_venir || []).length) {
     h += "<h2>Les jours suivants</h2>" + e.a_venir.map(function (j) {
-      return '<div class="jour">' + esc(j.jour) + '</div>' + (j.taches.length ? j.taches.map(tache).join("") : '<div class="vide">rien de prévu</div>');
+      var r = reposDu(j.iso);
+      return '<div class="jour">' + esc(j.jour) + '</div>' + (r ? blocRepos(r) : "") +
+        (j.taches.length ? j.taches.map(tache).join("") : (r ? "" : '<div class="vide">rien de prévu</div>'));
     }).join("");
   }
   document.getElementById("contenu").innerHTML = h;
+  listeRepos();
+}
+
+// ---------- Jours de repos
+function reposDu(iso) { return iso ? ((ETAT && ETAT.repos) || []).filter(function (r) { return r.iso === iso; })[0] : null; }
+function blocRepos(r) {
+  return '<div class="repos">☾ <b>Repos</b>' + (r.heures ? " · " + esc(r.heures) : " · toute la journée") +
+    (r.note ? '<div class="quoi">' + esc(r.note) + '</div>' : "") + '</div>';
+}
+var REPOS_ENVOYES = [];      // demandes parties vers le PC, pas encore prises en compte
+function listeRepos() {
+  var z = document.getElementById("rListe");
+  if (!z) return;
+  var liste = (ETAT && ETAT.repos) || [];
+  REPOS_ENVOYES = REPOS_ENVOYES.filter(function (a) { return Date.now() - a.ms < 300000; });
+  var h = REPOS_ENVOYES.map(function (a) { return '<div class="attente2">✓ ' + esc(a.texte) + ' — envoyé, le PC le prend en compte dans la minute.</div>'; }).join("");
+  h += liste.length ? liste.map(function (r) {
+    var retire = REPOS_ENVOYES.some(function (a) { return a.retire === r.iso; });
+    return '<div class="repos lr"><div><b>' + esc(r.jour) + '</b>' + (r.heures ? " · " + esc(r.heures) : "") +
+      (r.note ? '<div class="quoi">' + esc(r.note) + '</div>' : "") + '</div>' +
+      (retire ? '<span class="attente2">retrait envoyé</span>' : '<button onclick="retirerRepos(\'' + esc(r.iso) + '\')">Retirer</button>') + '</div>';
+  }).join("") : '<div class="vide">Aucun jour de repos prévu.</div>';
+  z.innerHTML = h;
+}
+function aujourdhuiIso() { var d = new Date(); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+function ouvrirRepos() {
+  if (!CONFIG) return;
+  var du = document.getElementById("rDu");
+  if (!du.value) du.value = aujourdhuiIso();
+  du.min = aujourdhuiIso(); document.getElementById("rAu").min = aujourdhuiIso();
+  document.getElementById("rErreur").textContent = "";
+  document.getElementById("fRepos").className = "ouvert";
+  listeRepos();
+}
+function fermerRepos() { document.getElementById("fRepos").className = ""; }
+function cocheJournee() { document.getElementById("rHeures").style.display = document.getElementById("rJournee").checked ? "none" : ""; }
+function dateFr(iso) { var p = iso.split("-"); return p[2] + "/" + p[1]; }
+function envoyerRepos() {
+  var du = document.getElementById("rDu").value, au = document.getElementById("rAu").value || du;
+  var journee = document.getElementById("rJournee").checked;
+  var h1 = journee ? "" : document.getElementById("rH1").value, h2 = journee ? "" : document.getElementById("rH2").value;
+  var note = document.getElementById("rNote").value.trim(), err = document.getElementById("rErreur");
+  if (!du) { err.textContent = "Choisis la date."; return; }
+  if (du < aujourdhuiIso()) { err.textContent = "Cette date est déjà passée."; return; }
+  if (au < du) { err.textContent = "La 2e date doit être après la 1re."; return; }
+  if (!journee && (!h1 || !h2 || h2 <= h1)) { err.textContent = "Choisis les heures (la 2e après la 1re), ou coche « Toute la journée »."; return; }
+  err.textContent = "";
+  var b = document.getElementById("rOk"); b.disabled = true; b.textContent = "Envoi…";
+  var texte = "Repos " + (au !== du ? "du " + dateFr(du) + " au " + dateFr(au) : "le " + dateFr(du)) + (h1 ? " de " + h1 + " à " + h2 : "");
+  envoyerAction("&action=repos&debut=" + du + "&fin=" + au + "&h1=" + encodeURIComponent(h1) + "&h2=" + encodeURIComponent(h2) +
+                "&note=" + encodeURIComponent(note),
+    function () {
+      b.disabled = false; b.textContent = "Enregistrer le repos";
+      REPOS_ENVOYES.push({texte: texte, ms: Date.now()});
+      document.getElementById("rNote").value = ""; document.getElementById("rAu").value = "";
+      listeRepos();
+      setTimeout(function () { charger(); }, 20000); setTimeout(function () { charger(); }, 70000);
+    },
+    function () { b.disabled = false; b.textContent = "Enregistrer le repos"; });
+}
+function retirerRepos(iso) {
+  var r = reposDu(iso);
+  if (!r || !confirm("Retirer le repos du " + r.jour + " ?")) return;
+  envoyerAction("&action=repos_retirer&jour=" + iso, function () {
+    REPOS_ENVOYES.push({texte: "Retrait du repos du " + r.jour, retire: iso, ms: Date.now()});
+    listeRepos();
+    setTimeout(function () { charger(); }, 20000); setTimeout(function () { charger(); }, 70000);
+  });
+}
+
+// Envoie une action au script Google (le Carnet du PC la prend dans la minute).
+function envoyerAction(extra, ok, ko) {
+  var fini = false;
+  function reussi(d) {
+    if (fini) return; fini = true;
+    if (d && d.ok === false) { alert("Le script Google a refusé : " + (d.erreur || "erreur") + "\nVérifie qu'il est bien à jour (nouvelle version déployée)."); if (ko) ko(); return; }
+    ok(d);
+  }
+  function rate() { if (fini) return; fini = true; alert("Impossible de joindre Google (pas de réseau ?). Réessaie."); if (ko) ko(); }
+  function jsonp() {
+    var nom = "mkr" + Date.now(), s = document.createElement("script");
+    window[nom] = function (d) { delete window[nom]; s.remove(); reussi(d); };
+    s.onerror = function () { s.remove(); rate(); };
+    s.src = adresse(extra + "&callback=" + nom);
+    document.head.appendChild(s);
+    setTimeout(rate, 15000);
+  }
+  try {
+    fetch(adresse(extra), {credentials: "omit", cache: "no-store", redirect: "follow"})
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(reussi).catch(jsonp);
+  } catch (e) { jsonp(); }
 }
 
 function adresse(extra) { return CONFIG.u + (CONFIG.u.indexOf("?") < 0 ? "?" : "&") + "cle=" + encodeURIComponent(CONFIG.k) + extra + "&t=" + Date.now(); }
