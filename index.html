@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>MKLM3D</title>
-<!-- version : filaments + produits + couleur d'une bobine en photo · maintenance · repos · caméra U1 · Récupérée -->
+<!-- version : filaments (ajout, stock, couleur, QR : scanner + étiquettes) + produits · maintenance · repos · caméra U1 · Récupérée -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -117,6 +117,27 @@ padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-ins
 .grosbouton.ok{background:var(--accent);color:#1a0d00}
 label.photo{display:block;text-align:center;border:1px dashed var(--accent);border-radius:12px;padding:18px;color:var(--accent);font-weight:600;margin-top:6px}
 label.photo input{display:none}
+.plein input.champ{width:100%;background:var(--panneau2);color:var(--texte);border:1px solid var(--bord);border-radius:8px;padding:10px;font:inherit;font-size:16px;-webkit-appearance:none;min-height:44px}
+.plein label.l{display:block;font-size:13px;color:var(--doux);margin:12px 0 6px}
+.deux2{display:flex;gap:10px}.deux2>div{flex:1;min-width:0}
+.bob{cursor:pointer}
+.envoye{font-size:13px;color:var(--ok);margin:6px 0}
+#impression{display:none}
+@media print{
+  body{background:#fff !important;padding:0 !important;color:#000}
+  body>*:not(#impression){display:none !important}
+  #impression{display:block !important;margin:8mm}
+  .eti{display:inline-flex;flex-direction:column;align-items:center;width:45mm;margin:3mm;padding:3mm;border:1px dashed #999;page-break-inside:avoid;break-inside:avoid;text-align:center;font-family:Arial,sans-serif;color:#000;vertical-align:top}
+  .eti svg{width:35mm;height:35mm}
+  .eti b{font-size:11pt;margin-top:2mm}
+  .eti span{font-size:9pt;color:#555}
+}
+#scanVideo{width:100%;border-radius:12px;border:1px solid var(--bord);background:#000;margin-top:8px;max-height:60vh;object-fit:cover}
+.coche{display:flex;align-items:center;gap:12px;background:var(--panneau);border:1px solid var(--bord);border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:15px}
+.coche input{width:22px;height:22px;flex:none}
+.coche .pastille{width:26px;height:26px;border-radius:7px}
+#etiApercu svg{width:120px;height:120px;background:#fff;border-radius:8px;padding:6px}
+#nbTeinteP{width:44px;height:44px;border-radius:10px;border:1px solid var(--bord);background:var(--panneau2);flex:none}
 #bFil,#bProd{border-color:var(--ok)}
 </style>
 </head>
@@ -126,8 +147,50 @@ label.photo input{display:none}
 <div id="contenu"></div>
 <p class="bas"><button id="bFil" onclick="ouvrirFil()">◎ Filaments</button><button id="bProd" onclick="ouvrirProd()">◫ Produits</button><button id="bRepos" onclick="ouvrirRepos()">☾ Repos</button><button id="bouton" onclick="actualiser()">Actualiser</button></p>
 <div id="fFil" class="plein"><div class="tete"><b>◎ Stock de filament</b><button onclick="fermer('fFil')">Fermer</button></div>
-<button class="grosbouton ok" onclick="ouvrirCoul()">📷 Couleur d'une bobine (photo)</button>
-<h2 id="filResume">Bobines</h2><div id="filListe"></div></div>
+<div class="deux2"><div><button class="grosbouton ok" onclick="ouvrirNouvelle()">＋ Nouvelle bobine</button></div>
+<div><button class="grosbouton" onclick="ouvrirCoul()">📷 Couleur (photo)</button></div></div>
+<div class="deux2"><div><button class="grosbouton" onclick="ouvrirScan()">⌗ Scanner un QR</button></div>
+<div><button class="grosbouton" onclick="ouvrirEti()">🏷 Étiquettes QR</button></div></div>
+<div id="filEnvoyes"></div>
+<h2 id="filResume">Bobines</h2><div class="aide" style="margin:-4px 0 8px">Touche une bobine pour corriger ce qu'il reste.</div><div id="filListe"></div></div>
+<div id="fNouv" class="plein"><div class="tete"><b>＋ Nouvelle bobine</b><button onclick="fermer('fNouv')">Fermer</button></div>
+<div class="deux2"><div><label class="l" for="nbType">Type</label><input class="champ" id="nbType" list="lTypes" value="PLA" autocomplete="off"></div>
+<div><label class="l" for="nbMarque">Marque</label><input class="champ" id="nbMarque" list="lMarques" autocomplete="off"></div></div>
+<datalist id="lTypes"></datalist><datalist id="lMarques"></datalist>
+<label class="l" for="nbCouleur">Couleur (nom)</label><input class="champ" id="nbCouleur" placeholder="ex. Blanc, Bleu nuit…">
+<label class="l">Couleur exacte (facultatif)</label>
+<div style="display:flex;gap:10px;align-items:center"><div id="nbTeinteP"></div><div id="nbTeinteT" class="aide" style="flex:1">—</div>
+<button onclick="couleurPourNouvelle()">📷 Photo</button></div>
+<div class="deux2"><div><label class="l" for="nbInitial">Filament neuf (g)</label><input class="champ" id="nbInitial" inputmode="decimal" value="1000"></div>
+<div><label class="l" for="nbVide">Bobine vide (g)</label><input class="champ" id="nbVide" inputmode="decimal" placeholder="facultatif"></div></div>
+<label class="l" for="nbPrix">Prix du filament (€/kg, facultatif)</label><input class="champ" id="nbPrix" inputmode="decimal">
+<div id="nbErreur" style="color:#ffb3c0;font-size:13px;margin-top:10px"></div>
+<button class="grosbouton ok" id="nbOk" onclick="envoyerNouvelle()">Créer la bobine sur le PC</button></div>
+<div id="fStock" class="plein"><div class="tete"><b>◎ Filament restant</b><button onclick="fermer('fStock')">Fermer</button></div>
+<div style="display:flex;gap:12px;align-items:center"><div class="pastille" id="stPast"></div>
+<div><div id="stNom" style="font-size:16px;font-weight:600"></div><div class="aide" id="stNum"></div></div></div>
+<div class="aide" id="stActuel" style="margin-top:8px"></div>
+<label class="l" for="stRestant">Il reste (g de filament)</label><input class="champ" id="stRestant" inputmode="decimal">
+<div id="stPeseeBloc"><label class="l" for="stPesee">… ou la pesée sur la balance (bobine + filament, g)</label><input class="champ" id="stPesee" inputmode="decimal"></div>
+<div class="aide" id="stPeseeAide"></div>
+<div id="stErreur" style="color:#ffb3c0;font-size:13px;margin-top:10px"></div>
+<button class="grosbouton ok" id="stOk" onclick="envoyerStock()">Enregistrer sur le PC</button>
+<button class="grosbouton" onclick="imprimerEtiquettes([ST.id])">🏷 Imprimer l'étiquette QR de cette bobine</button></div>
+<div id="fScan" class="plein"><div class="tete"><b>⌗ Scanner une bobine</b><button onclick="fermerScan()">Fermer</button></div>
+<div class="aide" id="scanAide">Montre le QR code de la bobine à la caméra.</div>
+<video id="scanVideo" playsinline muted></video>
+<label class="photo" id="scanPhotoBloc" style="display:none">Prendre le QR code en photo<input type="file" accept="image/*" onchange="scanPhoto(this)"></label>
+<label class="l" for="scanNum">… ou le n° de la bobine</label>
+<div class="deux2"><div><input class="champ" id="scanNum" inputmode="numeric"></div><div style="flex:0 0 auto"><button style="height:44px" onclick="scanNumero()">Ouvrir</button></div></div>
+<div id="scanErreur" style="color:#ffb3c0;font-size:13px;margin-top:10px"></div></div>
+<div id="fEti" class="plein"><div class="tete"><b>🏷 Étiquettes QR</b><button onclick="fermer('fEti')">Fermer</button></div>
+<div class="aide">Coche les bobines, puis « Imprimer » : choisis ton imprimante (AirPrint) ou « Enregistrer en PDF ». Découpe et colle les étiquettes sur les bobines.</div>
+<div class="deux2" style="margin:10px 0"><div><button class="grosbouton" style="margin:0" onclick="cocherTout(true)">Tout cocher</button></div>
+<div><button class="grosbouton" style="margin:0" onclick="cocherTout(false)">Tout décocher</button></div></div>
+<div id="etiListe"></div>
+<div id="etiErreur" style="color:#ffb3c0;font-size:13px;margin-top:10px"></div>
+<button class="grosbouton ok" onclick="imprimerCochees()">Imprimer les étiquettes</button></div>
+<div id="impression"></div>
 <div id="fProd" class="plein"><div class="tete"><b>◫ Mes produits</b><button onclick="fermer('fProd')">Fermer</button></div>
 <input class="chercher" id="prodCherche" type="search" placeholder="Chercher un produit…" oninput="listeProd()">
 <div id="prodListe"></div></div>
@@ -136,7 +199,7 @@ label.photo input{display:none}
 <label class="photo">Prendre ou choisir une photo<input type="file" accept="image/*" id="cFichier" onchange="photoChoisie(this)"></label>
 <canvas id="cPhoto"></canvas>
 <div id="cChoix"><div id="cPast"></div><div><div id="cCode">—</div><div class="aide" id="cAide">Touche le fil sur la photo.</div></div></div>
-<label for="cBobine" class="aide" style="display:block;margin-top:14px">Pour quelle bobine ?</label><select id="cBobine"></select>
+<div id="cBobBloc"><label for="cBobine" class="aide" style="display:block;margin-top:14px">Pour quelle bobine ?</label><select id="cBobine"></select></div>
 <div id="cErreur" style="color:#ffb3c0;font-size:13px;margin-top:8px"></div>
 <button class="grosbouton ok" id="cOk" onclick="envoyerCouleur()">Envoyer la couleur au PC</button></div>
 <div id="fRepos"><div class="tete"><b>☾ Jour de repos</b><button onclick="fermerRepos()">Fermer</button></div>
@@ -240,7 +303,7 @@ function dessiner() {
 // ---------- Filaments, produits, couleur d'une bobine
 function fermer(id) { document.getElementById(id).className = "plein"; }
 function ouvrir(id) { document.getElementById(id).className = "plein ouvert"; }
-function ouvrirFil() { if (!CONFIG) return; listeFil(); ouvrir("fFil"); }
+function ouvrirFil() { if (!CONFIG) return; listeFil(); montrerEnvoyes(); ouvrir("fFil"); }
 function ouvrirProd() { if (!CONFIG) return; listeProd(); ouvrir("fProd"); }
 var TEINTES_ENVOYEES = {};
 function listeFil() {
@@ -250,11 +313,199 @@ function listeFil() {
   document.getElementById("filResume").textContent = bs.length + " bobine" + (bs.length > 1 ? "s" : "") + (bas ? " · " + bas + " presque vide" + (bas > 1 ? "s" : "") : "");
   z.innerHTML = bs.length ? bs.map(function (b) {
     var t = TEINTES_ENVOYEES[b.id] || b.teinte, pct = Math.max(0, Math.min(100, Math.round(100 * b.restant / (b.initial || 1000))));
-    return '<div class="bob' + (b.bas ? " faible" : "") + '"><div class="pastille" style="' + (t ? "background:" + esc(t) : "") + '">' + (t ? "" : "?") + '</div>' +
+    return '<div class="bob' + (b.bas ? " faible" : "") + '" onclick="ouvrirStock(' + b.id + ')"><div class="pastille" style="' + (t ? "background:" + esc(t) : "") + '">' + (t ? "" : "?") + '</div>' +
       '<div class="txt"><div class="n">' + esc(b.nom) + '</div><div class="g">' + b.restant + ' g restants' + (b.bas ? " · à racheter" : "") +
       (TEINTES_ENVOYEES[b.id] ? ' · <span style="color:var(--ok)">couleur envoyée</span>' : "") + '</div>' +
       '<div class="barre"><i style="width:' + pct + '%"></i></div></div></div>';
   }).join("") : '<div class="vide">Aucune bobine enregistrée sur le PC.</div>';
+}
+var BOB_ENVOYEES = [];
+function montrerEnvoyes() {
+  BOB_ENVOYEES = BOB_ENVOYEES.filter(function (a) { return Date.now() - a.ms < 300000; });
+  var z = document.getElementById("filEnvoyes");
+  if (z) z.innerHTML = BOB_ENVOYEES.map(function (a) { return '<div class="envoye">✓ ' + esc(a.texte) + ' — envoyé, le PC le prend en compte dans la minute.</div>'; }).join("");
+}
+function apresEnvoi(texte) {
+  BOB_ENVOYEES.push({texte: texte, ms: Date.now()});
+  montrerEnvoyes();
+  setTimeout(function () { charger(); }, 20000); setTimeout(function () { charger(); }, 70000);
+}
+var NB = {teinte: ""};
+function ouvrirNouvelle() {
+  document.getElementById("lTypes").innerHTML = ((ETAT && ETAT.types) || ["PLA", "PETG"]).map(function (t) { return '<option value="' + esc(t) + '">'; }).join("");
+  document.getElementById("lMarques").innerHTML = ((ETAT && ETAT.marques) || []).map(function (t) { return '<option value="' + esc(t) + '">'; }).join("");
+  document.getElementById("nbErreur").textContent = "";
+  ouvrir("fNouv");
+}
+function couleurPourNouvelle() {
+  ouvrirCoul(function (t) {
+    NB.teinte = t;
+    document.getElementById("nbTeinteP").style.background = t;
+    document.getElementById("nbTeinteT").textContent = t;
+  });
+}
+function nombreOk(v, maxi) { v = (v || "").replace(",", ".").trim(); if (v === "") return ""; var n = Number(v); return isFinite(n) && n >= 0 && n <= maxi ? n : null; }
+function envoyerNouvelle() {
+  var g = function (id) { return document.getElementById(id).value.trim(); }, err = document.getElementById("nbErreur");
+  var type = g("nbType"), ini = nombreOk(g("nbInitial"), 20000), vide = nombreOk(g("nbVide"), 5000), prix = nombreOk(g("nbPrix"), 1000);
+  if (!type) { err.textContent = "Indique le type de filament (ex. PLA)."; return; }
+  if (ini === null || vide === null || prix === null) { err.textContent = "Vérifie les nombres (grammes, €/kg)."; return; }
+  err.textContent = "";
+  var b = document.getElementById("nbOk"); b.disabled = true; b.textContent = "Envoi…";
+  var nom = [type, g("nbCouleur")].filter(Boolean).join(" ") + (g("nbMarque") ? " (" + g("nbMarque") + ")" : "");
+  envoyerAction("&action=bobine&matiere=" + encodeURIComponent(type) + "&couleur=" + encodeURIComponent(g("nbCouleur")) +
+                "&marque=" + encodeURIComponent(g("nbMarque")) + "&teinte=" + encodeURIComponent(NB.teinte) +
+                "&initial=" + encodeURIComponent(ini === "" ? "" : ini) + "&vide=" + encodeURIComponent(vide) + "&prix_kg=" + encodeURIComponent(prix),
+    function () {
+      b.disabled = false; b.textContent = "Créer la bobine sur le PC";
+      ["nbCouleur", "nbMarque", "nbVide", "nbPrix"].forEach(function (id) { document.getElementById(id).value = ""; });
+      NB.teinte = ""; document.getElementById("nbTeinteP").style.background = ""; document.getElementById("nbTeinteT").textContent = "—";
+      fermer("fNouv"); apresEnvoi("Nouvelle bobine " + nom);
+    }, function () { b.disabled = false; b.textContent = "Créer la bobine sur le PC"; });
+}
+var ST = {id: null};
+function ouvrirStock(id) {
+  var b = ((ETAT && ETAT.bobines) || []).filter(function (x) { return x.id === id; })[0];
+  if (!b) return;
+  ST.id = id;
+  document.getElementById("stNom").textContent = b.nom;
+  document.getElementById("stNum").textContent = "Bobine n° " + b.id + (b.bas ? " · presque vide" : "");
+  var past = document.getElementById("stPast"); past.style.background = b.teinte || ""; past.textContent = b.teinte ? "" : "?";
+  document.getElementById("stActuel").textContent = "Actuellement : " + b.restant + " g de filament (sur " + b.initial + " g).";
+  document.getElementById("stRestant").value = ""; document.getElementById("stPesee").value = "";
+  document.getElementById("stPeseeBloc").style.display = b.vide != null ? "" : "none";
+  document.getElementById("stPeseeAide").textContent = b.vide != null ? "Bobine vide : " + b.vide + " g (enlevé de la pesée)."
+    : "Pour utiliser la balance, indique d'abord le poids de la bobine vide sur le PC.";
+  document.getElementById("stErreur").textContent = "";
+  ouvrir("fStock");
+}
+function envoyerStock() {
+  var r = nombreOk(document.getElementById("stRestant").value, 20000), p = nombreOk(document.getElementById("stPesee").value, 25000);
+  var err = document.getElementById("stErreur");
+  if (r === null || p === null) { err.textContent = "Écris un nombre de grammes."; return; }
+  if (r === "" && p === "") { err.textContent = "Indique ce qu'il reste, ou la pesée."; return; }
+  err.textContent = "";
+  var b = document.getElementById("stOk"), nom = document.getElementById("stNom").textContent;
+  b.disabled = true; b.textContent = "Envoi…";
+  envoyerAction("&action=stock&id=" + ST.id + "&restant=" + encodeURIComponent(r) + "&pesee=" + encodeURIComponent(p), function () {
+    b.disabled = false; b.textContent = "Enregistrer sur le PC";
+    fermer("fStock"); apresEnvoi(nom + " : " + (p !== "" ? "pesée " + p + " g" : r + " g restants"));
+  }, function () { b.disabled = false; b.textContent = "Enregistrer sur le PC"; });
+}
+// ---------- QR codes : étiquettes et scanner (bibliothèques gratuites chargées seulement quand il faut)
+var LIBS = {qr: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js",
+            lecteur: "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"};
+function chargerLib(nom, test, ok, ko) {
+  if (test()) { ok(); return; }
+  var s = document.createElement("script");
+  s.src = LIBS[nom];
+  s.onload = function () { test() ? ok() : ko(); };
+  s.onerror = ko;
+  document.head.appendChild(s);
+}
+function texteQR(id) { return "LM3D-BOBINE:" + id; }
+function svgQR(texte) {
+  var q = qrcode(0, "M"); q.addData(texte); q.make();
+  var n = q.getModuleCount(), m = 4, d = "";
+  for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += "M" + (c + m) + " " + (r + m) + "h1v1h-1z";
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + (n + 2 * m) + " " + (n + 2 * m) + '" shape-rendering="crispEdges">' +
+    '<rect width="100%" height="100%" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+}
+function imprimerEtiquettes(ids) {
+  var bs = ((ETAT && ETAT.bobines) || []).filter(function (b) { return ids.indexOf(b.id) >= 0; });
+  if (!bs.length) return;
+  chargerLib("qr", function () { return typeof qrcode === "function"; }, function () {
+    document.getElementById("impression").innerHTML = bs.map(function (b) {
+      return '<div class="eti">' + svgQR(texteQR(b.id)) + '<b>' + esc(b.nom || "Bobine") + '</b><span>Bobine n° ' + b.id + '</span></div>';
+    }).join("");
+    setTimeout(function () { window.print(); }, 200);
+  }, function () { alert("Impossible de créer les QR codes (pas de réseau ?). Réessaie."); });
+}
+function ouvrirEti() {
+  var bs = (ETAT && ETAT.bobines) || [];
+  document.getElementById("etiListe").innerHTML = bs.length ? bs.map(function (b) {
+    return '<label class="coche"><input type="checkbox" value="' + b.id + '" checked><span class="pastille" style="' +
+      (b.teinte ? "background:" + esc(b.teinte) : "") + '"></span><span>' + esc(b.nom) + ' <span class="aide">n° ' + b.id + '</span></span></label>';
+  }).join("") : '<div class="vide">Aucune bobine enregistrée sur le PC.</div>';
+  document.getElementById("etiErreur").textContent = "";
+  ouvrir("fEti");
+}
+function cocherTout(v) { document.querySelectorAll("#etiListe input").forEach(function (c) { c.checked = v; }); }
+function imprimerCochees() {
+  var ids = [].map.call(document.querySelectorAll("#etiListe input:checked"), function (c) { return Number(c.value); });
+  if (!ids.length) { document.getElementById("etiErreur").textContent = "Coche au moins une bobine."; return; }
+  imprimerEtiquettes(ids);
+}
+function lireQR(texte) {
+  var m = /LM3D-BOBINE:(\d+)/i.exec(texte || "") || /^\s*(\d+)\s*$/.exec(texte || "");
+  return m ? Number(m[1]) : null;
+}
+var SCAN = {flux: null, actif: false, canvas: document.createElement("canvas")};
+function trouveBobine(id) {
+  var b = ((ETAT && ETAT.bobines) || []).filter(function (x) { return x.id === id; })[0];
+  if (!b) { document.getElementById("scanErreur").textContent = "Bobine n° " + id + " inconnue (ajoutée sur le PC il y a moins d'une minute ?)."; return false; }
+  fermerScan(); ouvrirStock(id);
+  return true;
+}
+function ouvrirScan() {
+  document.getElementById("scanErreur").textContent = ""; document.getElementById("scanNum").value = "";
+  ouvrir("fScan");
+  chargerLib("lecteur", function () { return typeof jsQR === "function"; }, demarrerCamera, function () {
+    document.getElementById("scanAide").textContent = "Lecteur de QR indisponible (pas de réseau ?) : tape le n° de la bobine.";
+  });
+}
+function demarrerCamera() {
+  var v = document.getElementById("scanVideo");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { photoAuLieuDeVideo(); return; }
+  navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}, audio: false}).then(function (flux) {
+    SCAN.flux = flux; SCAN.actif = true;
+    v.srcObject = flux; v.style.display = "block";
+    v.play().catch(function () {});
+    requestAnimationFrame(boucleScan);
+  }).catch(photoAuLieuDeVideo);
+}
+function photoAuLieuDeVideo() {
+  document.getElementById("scanVideo").style.display = "none";
+  document.getElementById("scanPhotoBloc").style.display = "block";
+  document.getElementById("scanAide").textContent = "Caméra non autorisée : prends le QR code en photo, ou tape le n°.";
+}
+function decoderImage(source, l, h) {
+  var cv = SCAN.canvas, k = Math.min(1, 800 / Math.max(l, h));
+  cv.width = Math.round(l * k); cv.height = Math.round(h * k);
+  var ctx = cv.getContext("2d", {willReadFrequently: true});
+  ctx.drawImage(source, 0, 0, cv.width, cv.height);
+  var r = jsQR(ctx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height, {inversionAttempts: "dontInvert"});
+  return r ? lireQR(r.data) : null;
+}
+function boucleScan() {
+  if (!SCAN.actif) return;
+  var v = document.getElementById("scanVideo");
+  if (v.readyState >= 2 && v.videoWidth) {
+    var id = decoderImage(v, v.videoWidth, v.videoHeight);
+    if (id && trouveBobine(id)) return;
+  }
+  setTimeout(function () { requestAnimationFrame(boucleScan); }, 150);
+}
+function scanPhoto(input) {
+  var f = input.files && input.files[0];
+  if (!f) return;
+  var img = new Image();
+  img.onload = function () {
+    var id = decoderImage(img, img.naturalWidth, img.naturalHeight);
+    if (!id) document.getElementById("scanErreur").textContent = "Aucun QR code lu sur la photo : rapproche-toi et réessaie.";
+    else trouveBobine(id);
+  };
+  img.src = URL.createObjectURL(f);
+}
+function scanNumero() {
+  var id = lireQR(document.getElementById("scanNum").value);
+  if (!id) { document.getElementById("scanErreur").textContent = "Tape le n° écrit sous le QR code."; return; }
+  trouveBobine(id);
+}
+function fermerScan() {
+  SCAN.actif = false;
+  if (SCAN.flux) { SCAN.flux.getTracks().forEach(function (t) { t.stop(); }); SCAN.flux = null; }
+  fermer("fScan");
 }
 function nb(v) { return (v === null || v === undefined) ? "" : String(Math.round(v * 100) / 100).replace(".", ","); }
 function listeProd() {
@@ -270,8 +521,11 @@ function listeProd() {
       '<div class="n">' + esc(p.nom) + '</div><div class="g">' + (d.join(" · ") || "—") + '</div></div>';
   }).join("") : '<div class="vide">' + (ps.length ? "Aucun produit ne correspond." : "Aucun produit enregistré sur le PC.") + '</div>';
 }
-var COUL = {img: null, teinte: null, point: null};
-function ouvrirCoul() {
+var COUL = {img: null, teinte: null, point: null, retour: null};
+function ouvrirCoul(retour) {
+  COUL.retour = retour || null;
+  document.getElementById("cBobBloc").style.display = COUL.retour ? "none" : "";
+  document.getElementById("cOk").textContent = COUL.retour ? "Utiliser cette couleur" : "Envoyer la couleur au PC";
   var sel = document.getElementById("cBobine"), bs = (ETAT && ETAT.bobines) || [];
   sel.innerHTML = '<option value="">— choisis la bobine —</option>' + bs.map(function (b) {
     return '<option value="' + b.id + '">' + esc(b.nom) + ' (' + b.restant + ' g)</option>'; }).join("");
@@ -319,6 +573,7 @@ function prendreCouleur(ev) {
 function envoyerCouleur() {
   var id = document.getElementById("cBobine").value, err = document.getElementById("cErreur");
   if (!COUL.teinte) { err.textContent = "Prends une photo puis touche le fil."; return; }
+  if (COUL.retour) { var f = COUL.retour; COUL.retour = null; fermer("fCoul"); f(COUL.teinte); return; }
   if (!id) { err.textContent = "Choisis la bobine."; return; }
   err.textContent = "";
   var b = document.getElementById("cOk"); b.disabled = true; b.textContent = "Envoi…";
