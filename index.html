@@ -123,6 +123,7 @@ label.photo input{display:none}
 .bob{cursor:pointer}
 .envoye{font-size:13px;color:var(--ok);margin:6px 0}
 #impression{display:none}
+#apPetite.ok,#apA4.ok{background:var(--accent);color:#1a0d00;border-color:var(--accent);font-weight:700}
 @media print{
   body{background:#fff !important;padding:0 !important;color:#000}
   body>*:not(#impression){display:none !important}
@@ -192,7 +193,8 @@ label.photo input{display:none}
 <button class="grosbouton ok" onclick="imprimerCochees()">Préparer les étiquettes</button></div>
 <div id="impression"></div>
 <div id="fApercu" class="plein"><div class="tete"><b>🏷 Étiquettes prêtes</b><button onclick="fermer('fApercu')">Fermer</button></div>
-<div class="aide">Touche « Imprimer / Partager », puis dans le menu de l'iPhone choisis <b>Imprimer</b> (AirPrint) ou <b>Enregistrer dans Fichiers</b>. Imprime en taille réelle (A4), puis découpe en suivant les pointillés.</div>
+<div class="deux2" style="margin-bottom:8px"><div><button id="apPetite" class="ok" style="width:100%" onclick="choisirFormat('petite')">Petite (5 × 2 cm)</button></div>
+<div><button id="apA4" style="width:100%" onclick="choisirFormat('a4')">Feuille A4</button></div></div>
 <div class="aide" id="apAide" style="margin-top:6px"></div>
 <button class="grosbouton ok" id="apOk" onclick="partagerEtiquettes()">📤 Imprimer / Partager</button>
 <div id="apListe"></div></div>
@@ -418,7 +420,49 @@ function svgQR(texte) {
 }
 // Étiquettes : une image par page A4 (l'impression directe ne marche pas dans l'appli posée sur l'écran d'accueil),
 // puis le menu « Partager » de l'iPhone : Imprimer, Enregistrer dans Fichiers, AirDrop…
-var APERCU = {fichiers: [], urls: []};
+var APERCU = {fichiers: [], urls: [], ids: []};
+function formatEti() { try { return localStorage.getItem("mk_format_eti") || "petite"; } catch (e) { return "petite"; } }
+function choisirFormat(f) {
+  try { localStorage.setItem("mk_format_eti", f); } catch (e) {}
+  imprimerEtiquettes(APERCU.ids);
+}
+// Petite imprimante thermique : une image par bobine, 5 cm x 2 cm (QR à gauche, texte à droite).
+function etiquettesPetites(bs) {
+  var W = 1000, H = 400, mm = W / 50;           // 20 points par mm : bien net une fois réduit par l'imprimante
+  return bs.map(function (b) {
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+    var q = qrcode(0, "M"); q.addData(texteQR(b.id)); q.make();
+    var n = q.getModuleCount(), mod = Math.floor((H - 2 * mm) / (n + 4)), cote = mod * (n + 4);
+    var qx = Math.round(1 * mm), qy = Math.round((H - cote) / 2);
+    ctx.fillStyle = "#000";
+    for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) ctx.fillRect(qx + (c + 2) * mod, qy + (r + 2) * mod, mod, mod);
+    var tx = qx + cote + 1.5 * mm, largeur = W - tx - 1 * mm;
+    ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillStyle = "#000";
+    var nom = [b.matiere, b.couleur].filter(Boolean).join(" ") || b.nom || "Bobine";
+    var marqueH = b.marque ? 4.4 * mm : 0, numH = 4.2 * mm, dispo = H - 3.5 * mm - marqueH - numH;
+    var taille = 5.4 * mm, lignes;
+    function couper() {
+      ctx.font = "bold " + taille + "px Arial, sans-serif";
+      var res = [], l = "";
+      nom.split(" ").forEach(function (m) { var t = l ? l + " " + m : m; if (ctx.measureText(t).width > largeur && l) { res.push(l); l = m; } else l = t; });
+      res.push(l);
+      return res;
+    }
+    for (;;) {             // la plus grande taille qui tient (2 lignes au plus)
+      lignes = couper();
+      if ((lignes.length <= 2 && lignes.length * taille * 1.1 <= dispo && lignes.every(function (t) { return ctx.measureText(t).width <= largeur; })) || taille <= 2.6 * mm) break;
+      taille -= 0.2 * mm;
+    }
+    var y = 1.6 * mm;
+    lignes.slice(0, 2).forEach(function (t) { ctx.fillText(t, tx, y); y += taille * 1.1; });
+    if (b.marque) { ctx.font = (3.5 * mm) + "px Arial, sans-serif"; ctx.fillText(b.marque, tx, y + 0.5 * mm); }
+    ctx.font = "bold " + (3.5 * mm) + "px Arial, sans-serif";
+    ctx.fillText("Bobine n° " + b.id, tx, H - 1.6 * mm - 3.5 * mm);
+    return cv;
+  });
+}
 function pagesEtiquettes(bs) {
   var mm = 10, W = 210 * mm, H = 297 * mm, lw = 48 * mm, lh = 62 * mm, cols = 4, rows = 4;
   var x0 = (W - cols * lw) / 2, y0 = 12 * mm, parPage = cols * rows, pages = [];
@@ -450,25 +494,33 @@ function pagesEtiquettes(bs) {
 function imprimerEtiquettes(ids) {
   var bs = ((ETAT && ETAT.bobines) || []).filter(function (b) { return ids.indexOf(b.id) >= 0; });
   if (!bs.length) return;
+  APERCU.ids = ids.slice();
   chargerLib("qr", function () { return typeof qrcode === "function"; }, function () {
-    var pages = pagesEtiquettes(bs), z = document.getElementById("apListe");
+    var petite = formatEti() === "petite";
+    document.getElementById("apPetite").className = petite ? "ok" : "";
+    document.getElementById("apA4").className = petite ? "" : "ok";
+    var pages = petite ? etiquettesPetites(bs) : pagesEtiquettes(bs), z = document.getElementById("apListe");
     APERCU.urls.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} });
     APERCU.fichiers = []; APERCU.urls = []; z.innerHTML = "";
     var reste = pages.length;
     document.getElementById("apOk").disabled = true;
     pages.forEach(function (cv, i) {
       cv.toBlob(function (blob) {
-        var nom = "etiquettes-bobines" + (pages.length > 1 ? "-page" + (i + 1) : "") + ".png";
+        var nom = petite ? "etiquette-bobine-" + bs[i].id + ".png"
+                         : "etiquettes-bobines" + (pages.length > 1 ? "-page" + (i + 1) : "") + ".png";
         var url = URL.createObjectURL(blob);
         APERCU.urls[i] = url;
         try { APERCU.fichiers[i] = new File([blob], nom, {type: "image/png"}); } catch (e) { APERCU.fichiers[i] = null; }
         if (--reste === 0) {
-          z.innerHTML = APERCU.urls.map(function (u) { return '<img src="' + u + '" alt="Étiquettes" style="width:100%;background:#fff;border-radius:8px;margin-top:10px">'; }).join("");
+          z.innerHTML = APERCU.urls.map(function (u) { return '<img src="' + u + '" alt="Étiquettes" style="width:100%;background:#fff;border-radius:8px;margin-top:10px' + (petite ? ";border:1px dashed #999" : "") + '">'; }).join("");
           document.getElementById("apOk").disabled = false;
         }
       }, "image/png");
     });
-    document.getElementById("apAide").textContent = pages.length > 1 ? pages.length + " pages A4." : "1 page A4.";
+    document.getElementById("apAide").textContent = petite
+      ? (pages.length > 1 ? pages.length + " étiquettes de 5 × 2 cm (une image par bobine)." : "1 étiquette de 5 × 2 cm.") +
+        " Dans le menu, choisis l'appli de ta petite imprimante (ou « Enregistrer l'image », puis imprime-la depuis son appli)."
+      : (pages.length > 1 ? pages.length + " pages A4." : "1 page A4.") + " Imprime en taille réelle, puis découpe en suivant les pointillés.";
     ouvrir("fApercu");
   }, function () { alert("Impossible de créer les QR codes (pas de réseau ?). Réessaie."); });
 }
