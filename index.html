@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>MKLM3D</title>
-<!-- version : maintenance du lundi · jours de repos (affichage + bouton Repos) · caméra U1 · bouton Récupérée -->
+<!-- version : filaments + produits + couleur d'une bobine en photo · maintenance · repos · caméra U1 · Récupérée -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -89,13 +89,56 @@ border:1px solid var(--bord);border-radius:8px;padding:10px;font:inherit;font-si
 #fRepos .coche input{width:22px;height:22px}
 #fRepos .ok{width:100%;margin-top:20px;background:#8B7CF6;border-color:#8B7CF6;color:#0B0718;font-weight:700;padding:12px}
 #rErreur{color:#ffb3c0;font-size:13px;margin-top:10px}
+.plein{position:fixed;inset:0;background:var(--fond);z-index:11;display:none;overflow:auto;
+padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+.plein.ouvert{display:block}
+.plein .tete{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}
+.plein .tete b{font-size:17px;letter-spacing:.06em}
+.bob{display:flex;gap:12px;align-items:center;background:var(--panneau);border:1px solid var(--bord);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.bob.faible{border-color:var(--retard)}
+.pastille{width:38px;height:38px;border-radius:10px;flex:none;border:1px solid var(--bord);display:flex;align-items:center;justify-content:center;color:var(--doux);font-size:16px}
+.bob .txt{flex:1;min-width:0}
+.bob .n{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bob .g{font-size:13px;color:var(--doux);margin-top:3px}
+.bob.faible .g{color:#ffb3c0}
+.bob .barre i{background:var(--accent)}
+.bob.faible .barre i{background:var(--retard)}
+.prod{background:var(--panneau);border:1px solid var(--bord);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.prod .n{font-size:15px;font-weight:600}
+.prod .g{font-size:13px;color:var(--doux);margin-top:3px}
+.prod .prix{float:right;color:var(--accent);font-weight:700;font-size:15px}
+.chercher{width:100%;background:var(--panneau2);color:var(--texte);border:1px solid var(--bord);border-radius:8px;padding:10px;font:inherit;font-size:16px;margin-bottom:10px;-webkit-appearance:none}
+#cPhoto{width:100%;border-radius:12px;border:1px solid var(--bord);display:none;touch-action:none;margin-top:10px}
+#cChoix{display:flex;gap:12px;align-items:center;margin-top:12px}
+#cPast{width:56px;height:56px;border-radius:12px;border:1px solid var(--bord);background:var(--panneau2);flex:none}
+#cCode{font-size:18px;font-weight:700;letter-spacing:.04em}
+.plein select{width:100%;background:var(--panneau2);color:var(--texte);border:1px solid var(--bord);border-radius:8px;padding:10px;font:inherit;font-size:16px;margin-top:8px;min-height:44px}
+.grosbouton{width:100%;margin-top:12px;padding:12px;font-weight:700}
+.grosbouton.ok{background:var(--accent);color:#1a0d00}
+label.photo{display:block;text-align:center;border:1px dashed var(--accent);border-radius:12px;padding:18px;color:var(--accent);font-weight:600;margin-top:6px}
+label.photo input{display:none}
+#bFil,#bProd{border-color:var(--ok)}
 </style>
 </head>
 <body>
 <header><h1>MKLM<span>3D</span></h1><div><div class="maj" id="maj"></div><div class="maj" id="lu"></div></div></header>
 <div id="alerte"></div>
 <div id="contenu"></div>
-<p class="bas"><button id="bRepos" onclick="ouvrirRepos()">☾ Repos</button><button id="bouton" onclick="actualiser()">Actualiser</button></p>
+<p class="bas"><button id="bFil" onclick="ouvrirFil()">◎ Filaments</button><button id="bProd" onclick="ouvrirProd()">◫ Produits</button><button id="bRepos" onclick="ouvrirRepos()">☾ Repos</button><button id="bouton" onclick="actualiser()">Actualiser</button></p>
+<div id="fFil" class="plein"><div class="tete"><b>◎ Stock de filament</b><button onclick="fermer('fFil')">Fermer</button></div>
+<button class="grosbouton ok" onclick="ouvrirCoul()">📷 Couleur d'une bobine (photo)</button>
+<h2 id="filResume">Bobines</h2><div id="filListe"></div></div>
+<div id="fProd" class="plein"><div class="tete"><b>◫ Mes produits</b><button onclick="fermer('fProd')">Fermer</button></div>
+<input class="chercher" id="prodCherche" type="search" placeholder="Chercher un produit…" oninput="listeProd()">
+<div id="prodListe"></div></div>
+<div id="fCoul" class="plein"><div class="tete"><b>📷 Couleur d'une bobine</b><button onclick="fermer('fCoul')">Fermer</button></div>
+<div class="aide">Prends le fil en photo à la lumière du jour, sans flash, puis touche le fil sur la photo.</div>
+<label class="photo">Prendre ou choisir une photo<input type="file" accept="image/*" id="cFichier" onchange="photoChoisie(this)"></label>
+<canvas id="cPhoto"></canvas>
+<div id="cChoix"><div id="cPast"></div><div><div id="cCode">—</div><div class="aide" id="cAide">Touche le fil sur la photo.</div></div></div>
+<label for="cBobine" class="aide" style="display:block;margin-top:14px">Pour quelle bobine ?</label><select id="cBobine"></select>
+<div id="cErreur" style="color:#ffb3c0;font-size:13px;margin-top:8px"></div>
+<button class="grosbouton ok" id="cOk" onclick="envoyerCouleur()">Envoyer la couleur au PC</button></div>
 <div id="fRepos"><div class="tete"><b>☾ Jour de repos</b><button onclick="fermerRepos()">Fermer</button></div>
 <div class="aide">Comme sur le PC : aucun devis ni aucune tâche n'est planifié ces jours-là.</div>
 <label for="rDu">Du</label><input type="date" id="rDu">
@@ -146,6 +189,8 @@ function dessiner() {
       'Sur le PC : Carnet → Réglages → Carnet mobile (iPhone)… puis scanne le QR code avec l\'iPhone.</p>';
     document.getElementById("bouton").style.display = "none";
     document.getElementById("bRepos").style.display = "none";
+    document.getElementById("bFil").style.display = "none";
+    document.getElementById("bProd").style.display = "none";
     return;
   }
   if (!ETAT) { document.getElementById("contenu").innerHTML = '<p class="aide">Chargement…</p>'; return; }
@@ -188,7 +233,107 @@ function dessiner() {
   }
   document.getElementById("contenu").innerHTML = h;
   listeRepos();
+  listeFil();
+  listeProd();
 }
+
+// ---------- Filaments, produits, couleur d'une bobine
+function fermer(id) { document.getElementById(id).className = "plein"; }
+function ouvrir(id) { document.getElementById(id).className = "plein ouvert"; }
+function ouvrirFil() { if (!CONFIG) return; listeFil(); ouvrir("fFil"); }
+function ouvrirProd() { if (!CONFIG) return; listeProd(); ouvrir("fProd"); }
+var TEINTES_ENVOYEES = {};
+function listeFil() {
+  var bs = (ETAT && ETAT.bobines) || [], z = document.getElementById("filListe");
+  if (!z) return;
+  var bas = bs.filter(function (x) { return x.bas; }).length;
+  document.getElementById("filResume").textContent = bs.length + " bobine" + (bs.length > 1 ? "s" : "") + (bas ? " · " + bas + " presque vide" + (bas > 1 ? "s" : "") : "");
+  z.innerHTML = bs.length ? bs.map(function (b) {
+    var t = TEINTES_ENVOYEES[b.id] || b.teinte, pct = Math.max(0, Math.min(100, Math.round(100 * b.restant / (b.initial || 1000))));
+    return '<div class="bob' + (b.bas ? " faible" : "") + '"><div class="pastille" style="' + (t ? "background:" + esc(t) : "") + '">' + (t ? "" : "?") + '</div>' +
+      '<div class="txt"><div class="n">' + esc(b.nom) + '</div><div class="g">' + b.restant + ' g restants' + (b.bas ? " · à racheter" : "") +
+      (TEINTES_ENVOYEES[b.id] ? ' · <span style="color:var(--ok)">couleur envoyée</span>' : "") + '</div>' +
+      '<div class="barre"><i style="width:' + pct + '%"></i></div></div></div>';
+  }).join("") : '<div class="vide">Aucune bobine enregistrée sur le PC.</div>';
+}
+function nb(v) { return (v === null || v === undefined) ? "" : String(Math.round(v * 100) / 100).replace(".", ","); }
+function listeProd() {
+  var ps = (ETAT && ETAT.produits) || [], z = document.getElementById("prodListe");
+  if (!z) return;
+  var q = (document.getElementById("prodCherche").value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  var vus = ps.filter(function (p) { return !q || p.nom.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").indexOf(q) >= 0; });
+  z.innerHTML = vus.length ? vus.map(function (p) {
+    var d = [];
+    if (p.heures != null) d.push(nb(p.heures) + " h");
+    if (p.poids_g != null) d.push(nb(p.poids_g) + " g");
+    return '<div class="prod">' + (p.prix != null ? '<span class="prix">' + nb(p.prix) + ' €</span>' : "") +
+      '<div class="n">' + esc(p.nom) + '</div><div class="g">' + (d.join(" · ") || "—") + '</div></div>';
+  }).join("") : '<div class="vide">' + (ps.length ? "Aucun produit ne correspond." : "Aucun produit enregistré sur le PC.") + '</div>';
+}
+var COUL = {img: null, teinte: null, point: null};
+function ouvrirCoul() {
+  var sel = document.getElementById("cBobine"), bs = (ETAT && ETAT.bobines) || [];
+  sel.innerHTML = '<option value="">— choisis la bobine —</option>' + bs.map(function (b) {
+    return '<option value="' + b.id + '">' + esc(b.nom) + ' (' + b.restant + ' g)</option>'; }).join("");
+  document.getElementById("cErreur").textContent = "";
+  ouvrir("fCoul");
+}
+function photoChoisie(input) {
+  var f = input.files && input.files[0];
+  if (!f) return;
+  var img = new Image(), url = URL.createObjectURL(f);
+  img.onload = function () { COUL.img = img; COUL.point = null; dessinerPhoto(); };
+  img.src = url;
+}
+function dessinerPhoto() {
+  var cv = document.getElementById("cPhoto"), img = COUL.img;
+  if (!img) return;
+  var l = Math.min(1200, img.naturalWidth), h = Math.round(img.naturalHeight * l / img.naturalWidth);
+  cv.width = l; cv.height = h; cv.style.display = "block";
+  var ctx = cv.getContext("2d");
+  ctx.drawImage(img, 0, 0, l, h);
+  if (COUL.point) {
+    var p = COUL.point, r = Math.max(10, Math.round(l / 40));
+    ctx.lineWidth = Math.max(3, l / 300); ctx.strokeStyle = "#fff"; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.stroke();
+    ctx.strokeStyle = "#000"; ctx.beginPath(); ctx.arc(p.x, p.y, r + ctx.lineWidth, 0, 7); ctx.stroke();
+  }
+}
+function prendreCouleur(ev) {
+  var cv = document.getElementById("cPhoto");
+  if (!COUL.img) return;
+  var rect = cv.getBoundingClientRect(), t = ev.touches ? ev.touches[0] : ev;
+  var x = Math.round((t.clientX - rect.left) * cv.width / rect.width), y = Math.round((t.clientY - rect.top) * cv.height / rect.height);
+  dessinerPhoto();      // sans le rond, pour lire la vraie couleur
+  var r = Math.max(3, Math.round(cv.width / 120)), ctx = cv.getContext("2d");
+  var x0 = Math.max(0, x - r), y0 = Math.max(0, y - r), w = Math.min(cv.width - x0, 2 * r + 1), h = Math.min(cv.height - y0, 2 * r + 1);
+  var d = ctx.getImageData(x0, y0, w, h).data, s = [0, 0, 0], n = 0;
+  for (var i = 0; i < d.length; i += 4) { s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2]; n++; }
+  var hex = "#" + s.map(function (v) { return ("0" + Math.round(v / n).toString(16)).slice(-2); }).join("").toUpperCase();
+  COUL.teinte = hex; COUL.point = {x: x, y: y};
+  dessinerPhoto();
+  document.getElementById("cPast").style.background = hex;
+  document.getElementById("cCode").textContent = hex;
+  document.getElementById("cAide").textContent = "Pas la bonne ? Touche un autre endroit du fil.";
+  if (ev.cancelable) ev.preventDefault();
+}
+function envoyerCouleur() {
+  var id = document.getElementById("cBobine").value, err = document.getElementById("cErreur");
+  if (!COUL.teinte) { err.textContent = "Prends une photo puis touche le fil."; return; }
+  if (!id) { err.textContent = "Choisis la bobine."; return; }
+  err.textContent = "";
+  var b = document.getElementById("cOk"); b.disabled = true; b.textContent = "Envoi…";
+  envoyerAction("&action=teinte&id=" + encodeURIComponent(id) + "&teinte=" + encodeURIComponent(COUL.teinte), function () {
+    b.disabled = false; b.textContent = "Envoyer la couleur au PC";
+    TEINTES_ENVOYEES[id] = COUL.teinte;
+    fermer("fCoul"); listeFil();
+    setTimeout(function () { charger(); }, 20000); setTimeout(function () { charger(); }, 70000);
+  }, function () { b.disabled = false; b.textContent = "Envoyer la couleur au PC"; });
+}
+(function () {
+  var cv = document.getElementById("cPhoto");
+  cv.addEventListener("click", prendreCouleur);
+  cv.addEventListener("touchstart", prendreCouleur, {passive: false});
+})();
 
 // ---------- Jours de repos
 function reposDu(iso) { return iso ? ((ETAT && ETAT.repos) || []).filter(function (r) { return r.iso === iso; })[0] : null; }
