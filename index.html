@@ -184,13 +184,18 @@ label.photo input{display:none}
 <div class="deux2"><div><input class="champ" id="scanNum" inputmode="numeric"></div><div style="flex:0 0 auto"><button style="height:44px" onclick="scanNumero()">Ouvrir</button></div></div>
 <div id="scanErreur" style="color:#ffb3c0;font-size:13px;margin-top:10px"></div></div>
 <div id="fEti" class="plein"><div class="tete"><b>🏷 Étiquettes QR</b><button onclick="fermer('fEti')">Fermer</button></div>
-<div class="aide">Coche les bobines, puis « Imprimer » : choisis ton imprimante (AirPrint) ou « Enregistrer en PDF ». Découpe et colle les étiquettes sur les bobines.</div>
+<div class="aide">Coche les bobines, puis « Préparer les étiquettes ». Découpe et colle-les sur les bobines.</div>
 <div class="deux2" style="margin:10px 0"><div><button class="grosbouton" style="margin:0" onclick="cocherTout(true)">Tout cocher</button></div>
 <div><button class="grosbouton" style="margin:0" onclick="cocherTout(false)">Tout décocher</button></div></div>
 <div id="etiListe"></div>
 <div id="etiErreur" style="color:#ffb3c0;font-size:13px;margin-top:10px"></div>
-<button class="grosbouton ok" onclick="imprimerCochees()">Imprimer les étiquettes</button></div>
+<button class="grosbouton ok" onclick="imprimerCochees()">Préparer les étiquettes</button></div>
 <div id="impression"></div>
+<div id="fApercu" class="plein"><div class="tete"><b>🏷 Étiquettes prêtes</b><button onclick="fermer('fApercu')">Fermer</button></div>
+<div class="aide">Touche « Imprimer / Partager », puis dans le menu de l'iPhone choisis <b>Imprimer</b> (AirPrint) ou <b>Enregistrer dans Fichiers</b>. Imprime en taille réelle (A4), puis découpe en suivant les pointillés.</div>
+<div class="aide" id="apAide" style="margin-top:6px"></div>
+<button class="grosbouton ok" id="apOk" onclick="partagerEtiquettes()">📤 Imprimer / Partager</button>
+<div id="apListe"></div></div>
 <div id="fProd" class="plein"><div class="tete"><b>◫ Mes produits</b><button onclick="fermer('fProd')">Fermer</button></div>
 <input class="chercher" id="prodCherche" type="search" placeholder="Chercher un produit…" oninput="listeProd()">
 <div id="prodListe"></div></div>
@@ -411,15 +416,69 @@ function svgQR(texte) {
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + (n + 2 * m) + " " + (n + 2 * m) + '" shape-rendering="crispEdges">' +
     '<rect width="100%" height="100%" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
 }
+// Étiquettes : une image par page A4 (l'impression directe ne marche pas dans l'appli posée sur l'écran d'accueil),
+// puis le menu « Partager » de l'iPhone : Imprimer, Enregistrer dans Fichiers, AirDrop…
+var APERCU = {fichiers: [], urls: []};
+function pagesEtiquettes(bs) {
+  var mm = 10, W = 210 * mm, H = 297 * mm, lw = 48 * mm, lh = 62 * mm, cols = 4, rows = 4;
+  var x0 = (W - cols * lw) / 2, y0 = 12 * mm, parPage = cols * rows, pages = [];
+  for (var p = 0; p * parPage < bs.length; p++) {
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+    bs.slice(p * parPage, (p + 1) * parPage).forEach(function (b, k) {
+      var x = x0 + (k % cols) * lw, y = y0 + Math.floor(k / cols) * lh;
+      ctx.setLineDash([12, 10]); ctx.strokeStyle = "#999"; ctx.lineWidth = 3; ctx.strokeRect(x + 6, y + 6, lw - 12, lh - 12);
+      ctx.setLineDash([]);
+      var q = qrcode(0, "M"); q.addData(texteQR(b.id)); q.make();
+      var n = q.getModuleCount(), taille = 36 * mm, mod = Math.floor(taille / (n + 8)), cote = mod * (n + 8);
+      var qx = x + (lw - cote) / 2, qy = y + 3 * mm;
+      ctx.fillStyle = "#fff"; ctx.fillRect(qx, qy, cote, cote); ctx.fillStyle = "#000";
+      for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) ctx.fillRect(qx + (c + 4) * mod, qy + (r + 4) * mod, mod, mod);
+      ctx.textAlign = "center"; ctx.fillStyle = "#000"; ctx.font = "bold " + (4 * mm) + "px Arial, sans-serif";
+      var mots = (b.nom || "Bobine").split(" "), lignes = [], l = "";
+      mots.forEach(function (m) { var t = l ? l + " " + m : m; if (ctx.measureText(t).width > lw - 8 * mm && l) { lignes.push(l); l = m; } else l = t; });
+      lignes.push(l);
+      lignes.slice(0, 2).forEach(function (t, i) { ctx.fillText(t, x + lw / 2, qy + cote + 5 * mm + i * 4.6 * mm); });
+      ctx.font = (3.2 * mm) + "px Arial, sans-serif"; ctx.fillStyle = "#555";
+      ctx.fillText("Bobine n° " + b.id, x + lw / 2, qy + cote + 5 * mm + Math.min(2, lignes.length) * 4.6 * mm + 0.6 * mm);
+    });
+    pages.push(cv);
+  }
+  return pages;
+}
 function imprimerEtiquettes(ids) {
   var bs = ((ETAT && ETAT.bobines) || []).filter(function (b) { return ids.indexOf(b.id) >= 0; });
   if (!bs.length) return;
   chargerLib("qr", function () { return typeof qrcode === "function"; }, function () {
-    document.getElementById("impression").innerHTML = bs.map(function (b) {
-      return '<div class="eti">' + svgQR(texteQR(b.id)) + '<b>' + esc(b.nom || "Bobine") + '</b><span>Bobine n° ' + b.id + '</span></div>';
-    }).join("");
-    setTimeout(function () { window.print(); }, 200);
+    var pages = pagesEtiquettes(bs), z = document.getElementById("apListe");
+    APERCU.urls.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} });
+    APERCU.fichiers = []; APERCU.urls = []; z.innerHTML = "";
+    var reste = pages.length;
+    document.getElementById("apOk").disabled = true;
+    pages.forEach(function (cv, i) {
+      cv.toBlob(function (blob) {
+        var nom = "etiquettes-bobines" + (pages.length > 1 ? "-page" + (i + 1) : "") + ".png";
+        var url = URL.createObjectURL(blob);
+        APERCU.urls[i] = url;
+        try { APERCU.fichiers[i] = new File([blob], nom, {type: "image/png"}); } catch (e) { APERCU.fichiers[i] = null; }
+        if (--reste === 0) {
+          z.innerHTML = APERCU.urls.map(function (u) { return '<img src="' + u + '" alt="Étiquettes" style="width:100%;background:#fff;border-radius:8px;margin-top:10px">'; }).join("");
+          document.getElementById("apOk").disabled = false;
+        }
+      }, "image/png");
+    });
+    document.getElementById("apAide").textContent = pages.length > 1 ? pages.length + " pages A4." : "1 page A4.";
+    ouvrir("fApercu");
   }, function () { alert("Impossible de créer les QR codes (pas de réseau ?). Réessaie."); });
+}
+function partagerEtiquettes() {
+  var f = APERCU.fichiers.filter(Boolean);
+  if (navigator.canShare && f.length && navigator.canShare({files: f})) {
+    navigator.share({files: f, title: "Étiquettes des bobines"}).catch(function () {});
+  } else {
+    document.getElementById("apAide").textContent = "Touche longuement une image, puis « Partager » → « Imprimer » (ou « Enregistrer l'image »).";
+  }
 }
 function ouvrirEti() {
   var bs = (ETAT && ETAT.bobines) || [];
