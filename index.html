@@ -155,7 +155,7 @@ label.photo input{display:none}
 </style>
 </head>
 <body>
-<header><h1>MKLM<span>3D</span></h1><div><div class="maj" id="maj"></div><div class="maj" id="lu"></div></div></header>
+<header><h1>MKLM<span>3D</span></h1><div><div class="maj" id="maj"></div><div class="maj" id="lu"></div><div class="maj" id="version"></div></div></header>
 <div id="alerte"></div>
 <div id="contenu"></div>
 <p class="bas"><button id="bFil" onclick="ouvrirFil()">◎ Filaments</button><button id="bProd" onclick="ouvrirProd()">◫ Produits</button><button id="bRepos" onclick="ouvrirRepos()">☾ Repos</button><button id="bouton" onclick="actualiser()">Actualiser</button></p>
@@ -241,6 +241,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
+var VERSION_PAGE = "19.11 b";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 
 function lireConfig() {
   var c = {};
@@ -267,6 +268,7 @@ function tache(t) {
 
 function dessiner() {
   var alerte = document.getElementById("alerte");
+  document.getElementById("version").textContent = "page " + VERSION_PAGE;
   if (!CONFIG) {
     document.getElementById("contenu").innerHTML = '<p class="aide">Cette page a besoin de ton lien personnel.<br>' +
       'Sur le PC : Carnet → Réglages → Carnet mobile (iPhone)… puis scanne le QR code avec l\'iPhone.</p>';
@@ -286,10 +288,13 @@ function dessiner() {
     alerte.innerHTML = '<div class="alerte">Le Carnet n\'a rien envoyé depuis ' + duree(age) + ' (dernier envoi : ' + esc(e.maj_texte) + '). Le PC est peut-être éteint ou le Carnet fermé.</div>';
   } else if (!alerte.dataset.erreur) { alerte.innerHTML = ""; }
   var h = "";
+  document.getElementById("version").textContent = "page " + VERSION_PAGE + " · PC " + (e.version_pc || "ancienne version");
   if (e.a_facturer) {
     var nbf = Number(e.a_facturer.nb) || 0;
     h += '<div class="facturer"><span>À facturer</span><div><b>' + esc(e.a_facturer.texte) + '</b> <span>· ' + nbf +
       ' commande' + (nbf > 1 ? 's' : '') + '</span></div></div>';
+  } else {
+    h += '<div class="facturer"><span>À facturer</span><div><span>mets à jour le Carnet sur le PC</span></div></div>';
   }
   h += '<div class="resume">' + (e.resume || []).map(function (r) { return '<span class="puce">' + esc(r) + '</span>'; }).join("") + '</div>';
   h += '<h2>Machines</h2><div class="machines">' + (e.machines || []).map(function (m) {
