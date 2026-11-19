@@ -30,6 +30,9 @@ h1 span{color:var(--accent)}
 button{background:var(--panneau2);color:var(--texte);border:1px solid var(--accent);border-radius:8px;font:inherit;font-size:14px;padding:9px 16px}
 button:disabled{opacity:.7}
 h2{font-size:11px;letter-spacing:.18em;color:var(--doux);text-transform:uppercase;margin:22px 0 8px}
+.facturer{display:flex;justify-content:space-between;align-items:baseline;background:var(--panneau);border:1px solid var(--bord);border-left:3px solid var(--accent);border-radius:10px;padding:10px 14px;margin-bottom:10px}
+.facturer b{font-size:20px;color:var(--texte)}
+.facturer span{font-size:13px;color:var(--doux)}
 .alerte{background:#2a2108;border:1px solid var(--jaune);color:var(--jaune);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px}
 .erreur{background:#2a0d14;border-color:var(--retard);color:#ffb3c0}
 .resume{display:flex;flex-wrap:wrap;gap:6px}
@@ -282,7 +285,13 @@ function dessiner() {
   if (age > 10 && !alerte.dataset.erreur) {
     alerte.innerHTML = '<div class="alerte">Le Carnet n\'a rien envoyé depuis ' + duree(age) + ' (dernier envoi : ' + esc(e.maj_texte) + '). Le PC est peut-être éteint ou le Carnet fermé.</div>';
   } else if (!alerte.dataset.erreur) { alerte.innerHTML = ""; }
-  var h = '<div class="resume">' + (e.resume || []).map(function (r) { return '<span class="puce">' + esc(r) + '</span>'; }).join("") + '</div>';
+  var h = "";
+  if (e.a_facturer) {
+    var nbf = Number(e.a_facturer.nb) || 0;
+    h += '<div class="facturer"><span>À facturer</span><div><b>' + esc(e.a_facturer.texte) + '</b> <span>· ' + nbf +
+      ' commande' + (nbf > 1 ? 's' : '') + '</span></div></div>';
+  }
+  h += '<div class="resume">' + (e.resume || []).map(function (r) { return '<span class="puce">' + esc(r) + '</span>'; }).join("") + '</div>';
   h += '<h2>Machines</h2><div class="machines">' + (e.machines || []).map(function (m) {
     var s = '<div class="m' + (m.etat != "libre" ? " actif" : "") + '" style="--c:' + esc(m.couleur) + '"><div class="nom"><span class="pt"></span>' + esc(m.court) + '</div>';
     if (m.etat == "libre") { s += m.maintenance ? '<div class="etat" style="color:#FFD23F">🔧 maintenance</div>' : '<div class="etat">libre</div>'; }
