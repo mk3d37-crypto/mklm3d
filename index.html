@@ -30,6 +30,9 @@ h1 span{color:var(--accent)}
 button{background:var(--panneau2);color:var(--texte);border:1px solid var(--accent);border-radius:8px;font:inherit;font-size:14px;padding:9px 16px}
 button:disabled{opacity:.7}
 h2{font-size:11px;letter-spacing:.18em;color:var(--doux);text-transform:uppercase;margin:22px 0 8px}
+body.lecture .modif{display:none!important}
+.lect{display:none;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--jaune);border:1px solid var(--jaune);border-radius:999px;padding:2px 8px;margin-left:8px;vertical-align:middle}
+body.lecture .lect{display:inline-block}
 .facturer{display:flex;justify-content:space-between;align-items:baseline;background:var(--panneau);border:1px solid var(--bord);border-left:3px solid var(--accent);border-radius:10px;padding:10px 14px;margin-bottom:10px}
 .facturer b{font-size:20px;color:var(--texte)}
 .facturer span{font-size:13px;color:var(--doux)}
@@ -155,17 +158,17 @@ label.photo input{display:none}
 </style>
 </head>
 <body>
-<header><h1>MKLM<span>3D</span></h1><div><div class="maj" id="maj"></div><div class="maj" id="lu"></div><div class="maj" id="version"></div></div></header>
+<header><h1>MKLM<span>3D</span><em class="lect">LECTURE SEULE</em></h1><div><div class="maj" id="maj"></div><div class="maj" id="lu"></div><div class="maj" id="version"></div></div></header>
 <div id="alerte"></div>
 <div id="contenu"></div>
 <p class="bas"><button id="bFil" onclick="ouvrirFil()">◎ Filaments</button><button id="bProd" onclick="ouvrirProd()">◫ Produits</button><button id="bRepos" onclick="ouvrirRepos()">☾ Repos</button><button id="bouton" onclick="actualiser()">Actualiser</button></p>
 <div id="fFil" class="plein"><div class="tete"><b>◎ Stock de filament</b><button onclick="fermer('fFil')">Fermer</button></div>
-<div class="deux2"><div><button class="grosbouton ok" onclick="ouvrirNouvelle()">＋ Nouvelle bobine</button></div>
+<div class="deux2 modif"><div><button class="grosbouton ok" onclick="ouvrirNouvelle()">＋ Nouvelle bobine</button></div>
 <div><button class="grosbouton" onclick="ouvrirCoul()">📷 Couleur (photo)</button></div></div>
 <div class="deux2"><div><button class="grosbouton" onclick="ouvrirScan()">⌗ Scanner un QR</button></div>
 <div><button class="grosbouton" onclick="ouvrirEti()">🏷 Étiquettes QR</button></div></div>
 <div id="filEnvoyes"></div>
-<h2 id="filResume">Bobines</h2><div class="aide" style="margin:-4px 0 8px">Touche une bobine pour corriger ce qu'il reste.</div><div id="filListe"></div></div>
+<h2 id="filResume">Bobines</h2><div class="aide modif" style="margin:-4px 0 8px">Touche une bobine pour corriger ce qu'il reste.</div><div id="filListe"></div></div>
 <div id="fNouv" class="plein"><div class="tete"><b>＋ Nouvelle bobine</b><button onclick="fermer('fNouv')">Fermer</button></div>
 <div class="deux2"><div><label class="l" for="nbType">Type</label><input class="champ" id="nbType" list="lTypes" value="PLA" autocomplete="off"></div>
 <div><label class="l" for="nbMarque">Marque</label><input class="champ" id="nbMarque" list="lMarques" autocomplete="off"></div></div>
@@ -184,11 +187,11 @@ label.photo input{display:none}
 <div style="display:flex;gap:12px;align-items:center"><div class="pastille" id="stPast"></div>
 <div><div id="stNom" style="font-size:16px;font-weight:600"></div><div class="aide" id="stNum"></div></div></div>
 <div class="aide" id="stActuel" style="margin-top:8px"></div>
-<label class="l" for="stRestant">Il reste (g de filament)</label><input class="champ" id="stRestant" inputmode="decimal">
+<div class="modif"><label class="l" for="stRestant">Il reste (g de filament)</label><input class="champ" id="stRestant" inputmode="decimal">
 <div id="stPeseeBloc"><label class="l" for="stPesee">… ou la pesée sur la balance (bobine + filament, g)</label><input class="champ" id="stPesee" inputmode="decimal"></div>
 <div class="aide" id="stPeseeAide"></div>
 <div id="stErreur" style="color:#ffb3c0;font-size:13px;margin-top:10px"></div>
-<button class="grosbouton ok" id="stOk" onclick="envoyerStock()">Enregistrer sur le PC</button>
+<button class="grosbouton ok" id="stOk" onclick="envoyerStock()">Enregistrer sur le PC</button></div>
 <button class="grosbouton" onclick="imprimerEtiquettes([ST.id])">🏷 Imprimer l'étiquette QR de cette bobine</button></div>
 <div id="fScan" class="plein"><div class="tete"><b>⌗ Scanner une bobine</b><button onclick="fermerScan()">Fermer</button></div>
 <div class="aide" id="scanAide">Montre le QR code de la bobine à la caméra.</div>
@@ -224,14 +227,14 @@ label.photo input{display:none}
 <button class="grosbouton ok" id="cOk" onclick="envoyerCouleur()">Envoyer la couleur au PC</button></div>
 <div id="fRepos"><div class="tete"><b>☾ Jour de repos</b><button onclick="fermerRepos()">Fermer</button></div>
 <div class="aide">Comme sur le PC : aucun devis ni aucune tâche n'est planifié ces jours-là.</div>
-<label for="rDu">Du</label><input type="date" id="rDu">
+<div class="modif"><label for="rDu">Du</label><input type="date" id="rDu">
 <label for="rAu">Au (facultatif, pour plusieurs jours)</label><input type="date" id="rAu">
 <div class="coche"><input type="checkbox" id="rJournee" checked onchange="cocheJournee()"><span>Toute la journée</span></div>
 <div id="rHeures" style="display:none"><label>De quelle heure à quelle heure ?</label>
 <div class="deux"><input type="time" id="rH1" value="08:00"><span>à</span><input type="time" id="rH2" value="12:00"></div></div>
 <label for="rNote">Description (facultatif)</label><input type="text" id="rNote" maxlength="80" placeholder="ex. entretien des machines, rendez-vous…">
 <div id="rErreur"></div>
-<button class="ok" id="rOk" onclick="envoyerRepos()">Enregistrer le repos</button>
+<button class="ok" id="rOk" onclick="envoyerRepos()">Enregistrer le repos</button></div>
 <h2>Repos prévus</h2><div id="rListe"></div></div>
 <div id="camera"><div class="tete"><b id="camTitre">Caméra</b><button onclick="fermerCamera()">Fermer</button></div>
 <div class="cadre"><img id="camImg" alt=""><span id="camAttente" class="aide">Connexion à la caméra…</span></div>
@@ -241,7 +244,8 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "19.11 b";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "19.11 c";
+var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien     // montrée en haut à droite : pour vérifier que c'est la bonne page
 
 function lireConfig() {
   var c = {};
@@ -308,7 +312,7 @@ function dessiner() {
       s += '<div class="client">' + esc(m.client) + '</div>';
       if (m.id) {
         if (ENVOYES[m.id]) s += '<div class="attente">✓ Récupération signalée. Le PC la prend en compte dans la minute.</div>';
-        else s += '<button class="' + (f < 1 ? "" : "fort") + '" onclick="recuperee(' + Number(m.id) + ')">Récupérée ✓</button>';
+        else if (!LECTURE) s += '<button class="' + (f < 1 ? "" : "fort") + '" onclick="recuperee(' + Number(m.id) + ')">Récupérée ✓</button>';
       }
     }
     if (m.prochaine) s += '<div class="prochaine">Ensuite : ' + esc(m.prochaine) + '</div>';
@@ -773,7 +777,7 @@ function listeRepos() {
     var retire = REPOS_ENVOYES.some(function (a) { return a.retire === r.iso; });
     return '<div class="repos lr"><div><b>' + esc(r.jour) + '</b>' + (r.heures ? " · " + esc(r.heures) : "") +
       (r.note ? '<div class="quoi">' + esc(r.note) + '</div>' : "") + '</div>' +
-      (retire ? '<span class="attente2">retrait envoyé</span>' : '<button onclick="retirerRepos(\'' + esc(r.iso) + '\')">Retirer</button>') + '</div>';
+      (retire ? '<span class="attente2">retrait envoyé</span>' : (LECTURE ? '' : '<button onclick="retirerRepos(\'' + esc(r.iso) + '\')">Retirer</button>')) + '</div>';
   }).join("") : '<div class="vide">Aucun jour de repos prévu.</div>';
   z.innerHTML = h;
 }
@@ -825,6 +829,7 @@ function retirerRepos(iso) {
 
 // Envoie une action au script Google (le Carnet du PC la prend dans la minute).
 function envoyerAction(extra, ok, ko) {
+  if (LECTURE) { if (ko) ko(); return; }     // lien consultation : aucune modification
   var fini = false;
   function reussi(d) {
     if (fini) return; fini = true;
@@ -860,6 +865,8 @@ function charger(ok, ko) {
     delete alerte.dataset.erreur;
     if (d && d.etat) {
       ETAT = d.etat; LU = Date.now();
+      LECTURE = !!ETAT.lecture;
+      document.body.className = LECTURE ? "lecture" : "";
       var encore = {};
       (ETAT.machines || []).forEach(function (x) { if (x.id && ENVOYES[x.id] && Date.now() - ENVOYES[x.id] < 300000) encore[x.id] = ENVOYES[x.id]; });
       ENVOYES = encore;
@@ -892,6 +899,7 @@ function charger(ok, ko) {
 // Bouton « Récupérée » : on prévient le script Google, le Carnet (PC) fait le reste dans la minute.
 var ENVOYES = {};
 function recuperee(id) {
+  if (LECTURE) return;
   var m = (ETAT.machines || []).filter(function (x) { return x.id === id; })[0];
   if (!m) return;
   var encore = (m.fin && Date.now() < m.fin) ? "\n\nAttention : d'après le Carnet, l'impression n'est pas encore finie." : "";
