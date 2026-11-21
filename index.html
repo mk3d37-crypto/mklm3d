@@ -121,6 +121,18 @@ padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-ins
 .prod .n{font-size:15px;font-weight:600}
 .prod .g{font-size:13px;color:var(--doux);margin-top:3px}
 .prod .prix{float:right;color:var(--accent);font-weight:700;font-size:15px}
+.facturer.clic{cursor:pointer}
+.facturer .fl{color:var(--accent);font-size:18px;margin-left:6px}
+.fact{display:flex;gap:12px;align-items:flex-start;background:var(--panneau);border:1px solid var(--bord);border-radius:12px;padding:11px 12px;margin-bottom:8px}
+.fact.coche{border-color:var(--accent)}
+.fact input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--accent);flex:0 0 auto}
+.fact .corps{flex:1;min-width:0}
+.fact .n{font-size:15px;font-weight:600}
+.fact .g{font-size:13px;color:var(--doux);margin-top:3px}
+.fact .prix{color:var(--accent);font-weight:700;font-size:15px;white-space:nowrap}
+.facttout{display:flex;gap:10px;align-items:center;font-size:15px;margin:4px 0 10px}
+.facttout input{width:22px;height:22px;accent-color:var(--accent)}
+.facttotal{font-size:15px;color:var(--accent);font-weight:600;margin-top:4px}
 .chercher{width:100%;background:var(--panneau2);color:var(--texte);border:1px solid var(--bord);border-radius:8px;padding:10px;font:inherit;font-size:16px;margin-bottom:10px;-webkit-appearance:none}
 #cPhoto{width:100%;border-radius:12px;border:1px solid var(--bord);display:none;touch-action:none;margin-top:10px}
 #cChoix{display:flex;gap:12px;align-items:center;margin-top:12px}
@@ -213,6 +225,9 @@ label.photo input{display:none}
 <div class="aide" id="apAide" style="margin-top:6px"></div>
 <button class="grosbouton ok" id="apOk" onclick="partagerEtiquettes()">📤 Imprimer / Partager</button>
 <div id="apListe"></div></div>
+<div id="fFact" class="plein"><div class="tete"><b>€ À facturer</b><button onclick="fermer('fFact')">Fermer</button></div>
+<p class="aide" id="factAide"></p><div id="factListe"></div><div class="facttotal" id="factTotal"></div>
+<button class="grosbouton ok" id="factOk" onclick="envoyerPaye()">C'est payé</button></div>
 <div id="fProd" class="plein"><div class="tete"><b>◫ Mes produits</b><button onclick="fermer('fProd')">Fermer</button></div>
 <input class="chercher" id="prodCherche" type="search" placeholder="Chercher un produit…" oninput="listeProd()">
 <div id="prodListe"></div></div>
@@ -243,7 +258,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "20.11 b";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "20.11 c";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -295,8 +310,8 @@ function dessiner(nouveau) {
   document.getElementById("version").textContent = "page " + VERSION_PAGE + " · PC " + (e.version_pc || "ancienne version");
   if (e.a_facturer) {
     var nbf = Number(e.a_facturer.nb) || 0;
-    h += '<div class="facturer"><span>À facturer</span><div><b>' + esc(e.a_facturer.texte) + '</b> <span>· ' + nbf +
-      ' commande' + (nbf > 1 ? 's' : '') + '</span></div></div>';
+    h += '<div class="facturer clic" onclick="ouvrirFact()"><span>À facturer</span><div><b>' + esc(e.a_facturer.texte) + '</b> <span>· ' + nbf +
+      ' commande' + (nbf > 1 ? 's' : '') + '</span><span class="fl">›</span></div></div>';
   } else {
     h += '<div class="facturer"><span>À facturer</span><div><span>mets à jour le Carnet sur le PC</span></div></div>';
   }
@@ -334,6 +349,7 @@ function dessiner(nouveau) {
     if (estOuvert("fRepos")) listeRepos();
     if (estOuvert("fFil")) listeFil();
     if (estOuvert("fProd")) listeProd();
+    if (estOuvert("fFact")) listeFact();
   }
 }
 function estOuvert(id) { return / ?ouvert$/.test(document.getElementById(id).className); }
@@ -342,6 +358,65 @@ function estOuvert(id) { return / ?ouvert$/.test(document.getElementById(id).cla
 function fermer(id) { document.getElementById(id).className = "plein"; }
 function ouvrir(id) { document.getElementById(id).className = "plein ouvert"; }
 function ouvrirFil() { if (!CONFIG) return; listeFil(); montrerEnvoyes(); ouvrir("fFil"); }
+// « À facturer » : la liste des commandes livrées ; on coche ce qui est payé (comme sur le PC).
+var PAYES = {}, FACT_COCHES = {};
+function ouvrirFact() { if (!CONFIG || !ETAT) return; FACT_COCHES = {}; listeFact(); ouvrir("fFact"); }
+function euro(v) {
+  var t = (Math.round((Number(v) || 0) * 100) / 100).toFixed(2).split(".");
+  return t[0].replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f") + "," + t[1] + " €";
+}
+function factVisibles() {
+  var a = (ETAT && ETAT.a_facturer) || {};
+  return (a.liste || []).filter(function (x) { return !(PAYES[x.id] && Date.now() - PAYES[x.id] < 300000); });
+}
+function listeFact() {
+  var a = (ETAT && ETAT.a_facturer) || {}, z = document.getElementById("factListe"), l = factVisibles();
+  var aide = document.getElementById("factAide"), ok = document.getElementById("factOk"), tot = document.getElementById("factTotal");
+  if (!a.liste) {
+    aide.textContent = "Mets à jour le Carnet sur le PC pour voir le détail.";
+    z.innerHTML = ""; tot.textContent = ""; ok.style.display = "none"; return;
+  }
+  var enAttente = (a.liste.length - l.length);
+  aide.textContent = LECTURE ? "Les commandes livrées, pas encore payées." :
+    "Coche ce qui est payé, puis « C'est payé » : les commandes passent en « Payé » sur le PC (dans la minute)." +
+    (enAttente ? " (" + enAttente + " envoyée" + (enAttente > 1 ? "s" : "") + ", en cours.)" : "");
+  if (!l.length) {
+    z.innerHTML = '<div class="vide">Rien à facturer : tout est payé.</div>'; tot.textContent = ""; ok.style.display = "none"; return;
+  }
+  var tous = l.every(function (x) { return FACT_COCHES[x.id]; });
+  z.innerHTML = (LECTURE ? "" : '<label class="facttout"><input type="checkbox" ' + (tous ? "checked " : "") +
+    'onchange="toutFact(this.checked)">Tout cocher</label>') + l.map(function (x) {
+    var d = [x.qte + " pièce" + (x.qte === "1" ? "" : "s")];
+    if (x.livraison) d.push("livraison " + x.livraison);
+    return '<label class="fact' + (FACT_COCHES[x.id] ? " coche" : "") + '">' +
+      (LECTURE ? "" : '<input type="checkbox" ' + (FACT_COCHES[x.id] ? "checked " : "") + 'onchange="cocherFact(' + Number(x.id) + ', this.checked)">') +
+      '<div class="corps"><div class="n">' + esc(x.client) + (x.quoi ? ' · ' + esc(x.quoi) : "") + '</div><div class="g">' + esc(d.join(" · ")) + '</div></div>' +
+      '<span class="prix">' + esc(x.montant) + '</span></label>';
+  }).join("");
+  var ch = l.filter(function (x) { return FACT_COCHES[x.id]; });
+  var total = l.reduce(function (s, x) { return s + (Number(x.valeur) || 0); }, 0);
+  tot.textContent = LECTURE ? "Total : " + euro(total) :
+    ch.length + " cochée" + (ch.length > 1 ? "s" : "") + " sur " + l.length + " · " +
+    euro(ch.reduce(function (s, x) { return s + (Number(x.valeur) || 0); }, 0));
+  ok.style.display = LECTURE ? "none" : "";
+}
+function cocherFact(id, oui) { if (oui) FACT_COCHES[id] = true; else delete FACT_COCHES[id]; listeFact(); }
+function toutFact(oui) { FACT_COCHES = {}; if (oui) factVisibles().forEach(function (x) { FACT_COCHES[x.id] = true; }); listeFact(); }
+function envoyerPaye() {
+  if (LECTURE) return;
+  var ch = factVisibles().filter(function (x) { return FACT_COCHES[x.id]; });
+  var tot = document.getElementById("factTotal"), b = document.getElementById("factOk");
+  if (!ch.length) { tot.textContent = "Coche d'abord au moins une commande."; return; }
+  var total = ch.reduce(function (s, x) { return s + (Number(x.valeur) || 0); }, 0);
+  if (!confirm(ch.length + " commande" + (ch.length > 1 ? "s" : "") + " payée" + (ch.length > 1 ? "s" : "") + " (" + euro(total) + ") ?")) return;
+  b.disabled = true; b.textContent = "Envoi…";
+  envoyerAction("&action=paye&ids=" + ch.map(function (x) { return Number(x.id); }).join(","), function () {
+    b.disabled = false; b.textContent = "C'est payé";
+    ch.forEach(function (x) { PAYES[x.id] = Date.now(); });
+    FACT_COCHES = {}; listeFact();
+    setTimeout(function () { charger(); }, 20000); setTimeout(function () { charger(); }, 70000);
+  }, function () { b.disabled = false; b.textContent = "C'est payé"; });
+}
 function ouvrirProd() { if (!CONFIG) return; listeProd(); ouvrir("fProd"); }
 var TEINTES_ENVOYEES = {};
 var GROUPES_OUVERTS = {}, ORDRE_GROUPES = [];
