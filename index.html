@@ -258,7 +258,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "20.11 d";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "20.11 e";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -331,7 +331,7 @@ function dessiner(nouveau) {
       }
     }
     if (m.prochaine) s += '<div class="prochaine">Ensuite : ' + esc(m.prochaine) + '</div>';
-    if (m.camera || m.nom === "Snapmaker U1") s += '<button class="cam" onclick="ouvrirCamera(\'' + esc(m.court) + '\')">Voir la caméra</button>';
+    if (m.camera) s += '<button class="cam" onclick="ouvrirCamera(\'' + esc(m.court) + '\')">Voir la caméra</button>';
     return s + "</div>";
   }).join("") + '</div>';
   var rAuj = reposDu(e.aujourdhui);
@@ -981,7 +981,7 @@ function recuperee(id) {
   });
 }
 
-// Caméra de la U1 : l'image passe par le Carnet (PC allumé à la maison) puis par ton script Google.
+// Caméra : l'image passe par le Carnet (PC allumé à la maison) puis par ton script Google.
 var CAM = {ouvert: false, minuterie: null, debut: 0};
 function ouvrirCamera(nom) {
   CAM.ouvert = true; CAM.debut = Date.now();
@@ -989,7 +989,7 @@ function ouvrirCamera(nom) {
   document.getElementById("camImg").style.display = "none";
   document.getElementById("camAttente").style.display = "";
   document.getElementById("camAttente").textContent = "Connexion à la caméra…";
-  document.getElementById("camInfo").textContent = "La première image arrive en 5 secondes environ.";
+  document.getElementById("camInfo").textContent = "Le PC réveille la caméra : la première image arrive en 5 à 20 secondes.";
   document.getElementById("camera").className = "ouvert";
   imageCamera();
 }
@@ -1000,10 +1000,12 @@ function fermerCamera() {
 function imageCamera() {
   if (!CAM.ouvert || !CONFIG) return;
   var fini = false, depart = Date.now();
+  // une demande qui ne répond jamais (réseau du téléphone, Google lent) ne doit pas bloquer la caméra : 15 s au plus
+  var garde = setTimeout(function () { ko(true); }, 15000);
   // une demande par seconde (si Google met plus d'une seconde à répondre, la suivante part tout de suite après)
   function suite() { if (CAM.ouvert) CAM.minuterie = setTimeout(imageCamera, Math.max(150, 1000 - (Date.now() - depart))); }
   function recu(d) {
-    if (fini) return; fini = true;
+    if (fini) return; fini = true; clearTimeout(garde);
     var info = document.getElementById("camInfo"), img = document.getElementById("camImg");
     var age = d && d.ms ? (Date.now() - d.ms) / 1000 : 1e9;
     if (d && d.image && age < 90) {
@@ -1018,20 +1020,27 @@ function imageCamera() {
     } else if (Date.now() - CAM.debut > 40000) {
       info.textContent = "Pas d'image : le PC est peut-être éteint, le Carnet fermé, ou l'imprimante éteinte.";
       if (d && d.image) { img.src = "data:image/jpeg;base64," + d.image; img.style.display = ""; document.getElementById("camAttente").style.display = "none"; }
+    } else if (img.style.display === "none") {
+      info.textContent = "Le PC réveille la caméra… (" + Math.round((Date.now() - CAM.debut) / 1000) + " s)";
     }
     suite();
   }
-  function ko() { if (fini) return; fini = true; document.getElementById("camInfo").textContent = "Impossible de joindre Google (réseau ?)."; suite(); }
+  function ko(lent) {
+    if (fini) return; fini = true; clearTimeout(garde);
+    document.getElementById("camInfo").textContent = lent ? "Google répond lentement : nouvel essai…" : "Impossible de joindre Google (réseau ?) : nouvel essai…";
+    suite();
+  }
   function jsonp() {
     var nom = "mkc" + Date.now(), s = document.createElement("script");
     window[nom] = function (d) { delete window[nom]; s.remove(); recu(d); };
     s.onerror = function () { s.remove(); ko(); };
     s.src = adresse("&action=camera_voir&callback=" + nom);
     document.head.appendChild(s);
-    setTimeout(ko, 15000);
   }
   try {
-    fetch(adresse("&action=camera_voir"), {credentials: "omit", cache: "no-store", redirect: "follow"})
+    var arret = window.AbortController ? new AbortController() : null;
+    if (arret) setTimeout(function () { arret.abort(); }, 12000);
+    fetch(adresse("&action=camera_voir"), {credentials: "omit", cache: "no-store", redirect: "follow", signal: arret ? arret.signal : undefined})
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(recu).catch(jsonp);
   } catch (e) { jsonp(); }
