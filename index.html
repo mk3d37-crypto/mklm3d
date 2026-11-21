@@ -989,7 +989,7 @@ function ouvrirCamera(nom) {
   document.getElementById("camImg").style.display = "none";
   document.getElementById("camAttente").style.display = "";
   document.getElementById("camAttente").textContent = "Connexion à la caméra…";
-  document.getElementById("camInfo").textContent = "Le PC réveille la caméra : la première image arrive en 5 à 20 secondes.";
+  document.getElementById("camInfo").textContent = "Le PC réveille la caméra : la première image arrive en quelques secondes.";
   document.getElementById("camera").className = "ouvert";
   imageCamera();
 }
@@ -1000,10 +1000,10 @@ function fermerCamera() {
 function imageCamera() {
   if (!CAM.ouvert || !CONFIG) return;
   var fini = false, depart = Date.now();
-  // une demande qui ne répond jamais (réseau du téléphone, Google lent) ne doit pas bloquer la caméra : 15 s au plus
-  var garde = setTimeout(function () { ko(true); }, 15000);
-  // une demande par seconde (si Google met plus d'une seconde à répondre, la suivante part tout de suite après)
-  function suite() { if (CAM.ouvert) CAM.minuterie = setTimeout(imageCamera, Math.max(150, 1000 - (Date.now() - depart))); }
+  // une demande qui ne répond jamais (réseau du téléphone, Google lent) ne doit pas bloquer la caméra : 8 s au plus
+  var garde = setTimeout(function () { ko(true); }, 8000);
+  // aussi vite que possible : la demande suivante part dès que la précédente a répondu (Google répond en 0,3 à 1 s)
+  function suite() { if (CAM.ouvert) CAM.minuterie = setTimeout(imageCamera, Math.max(50, 300 - (Date.now() - depart))); }
   function recu(d) {
     if (fini) return; fini = true; clearTimeout(garde);
     var info = document.getElementById("camInfo"), img = document.getElementById("camImg");
@@ -1011,7 +1011,7 @@ function imageCamera() {
     if (d && d.image && age < 90) {
       img.src = "data:image/jpeg;base64," + d.image; img.style.display = "";
       document.getElementById("camAttente").style.display = "none";
-      info.textContent = "Image de " + hm(d.ms) + ":" + ("0" + new Date(d.ms).getSeconds()).slice(-2) + " · une nouvelle chaque seconde environ";
+      info.textContent = "En direct · image de " + hm(d.ms) + ":" + ("0" + new Date(d.ms).getSeconds()).slice(-2) + " (" + Math.max(0, Math.round(age)) + " s de décalage)";
     } else if (d && d.image && img.style.display === "none") {
       // en attendant le direct : la dernière image connue, tout de suite
       img.src = "data:image/jpeg;base64," + d.image; img.style.display = "";
@@ -1039,7 +1039,7 @@ function imageCamera() {
   }
   try {
     var arret = window.AbortController ? new AbortController() : null;
-    if (arret) setTimeout(function () { arret.abort(); }, 12000);
+    if (arret) setTimeout(function () { arret.abort(); }, 7000);
     fetch(adresse("&action=camera_voir"), {credentials: "omit", cache: "no-store", redirect: "follow", signal: arret ? arret.signal : undefined})
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(recu).catch(jsonp);
