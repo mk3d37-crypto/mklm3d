@@ -258,7 +258,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "20.11 c";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "20.11 d";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -548,13 +548,6 @@ function chargerLib(nom, test, ok, ko) {
   document.head.appendChild(s);
 }
 function texteQR(id) { return "LM3D-BOBINE:" + id; }
-function svgQR(texte) {
-  var q = qrcode(0, "M"); q.addData(texte); q.make();
-  var n = q.getModuleCount(), m = 4, d = "";
-  for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += "M" + (c + m) + " " + (r + m) + "h1v1h-1z";
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + (n + 2 * m) + " " + (n + 2 * m) + '" shape-rendering="crispEdges">' +
-    '<rect width="100%" height="100%" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
-}
 // Étiquettes : une image par page A4 (l'impression directe ne marche pas dans l'appli posée sur l'écran d'accueil),
 // puis le menu « Partager » de l'iPhone : Imprimer, Enregistrer dans Fichiers, AirDrop…
 var APERCU = {fichiers: [], urls: [], ids: []};
