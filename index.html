@@ -142,6 +142,10 @@ padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-ins
 #cPast{width:56px;height:56px;border-radius:12px;border:1px solid var(--bord);background:var(--panneau2);flex:none}
 #cCode{font-size:18px;font-weight:700;letter-spacing:.04em}
 .plein select{width:100%;background:var(--panneau2);color:var(--texte);border:1px solid var(--bord);border-radius:8px;padding:10px;font:inherit;font-size:16px;margin-top:8px;min-height:44px}
+.filtres{display:flex;gap:8px;margin:12px 0 8px}.filtres>div{flex:1;min-width:0}
+.filtres label{display:block;font-size:12px;color:var(--doux);margin:0 0 2px}
+.filtres select{margin-top:0!important;padding:8px!important;font-size:15px!important}
+#filTout{width:100%;margin:0 0 8px;padding:8px;font-weight:600;display:none}
 .grosbouton{width:100%;margin-top:12px;padding:12px;font-weight:700}
 .grosbouton.ok{background:var(--accent);color:#1a0d00}
 label.photo{display:block;text-align:center;border:1px dashed var(--accent);border-radius:12px;padding:18px;color:var(--accent);font-weight:600;margin-top:6px}
@@ -182,6 +186,10 @@ label.photo input{display:none}
 <div class="deux2"><div><button class="grosbouton" onclick="ouvrirScan()">⌗ Scanner un QR</button></div>
 <div><button class="grosbouton" onclick="ouvrirEti()">🏷 Étiquettes QR</button></div></div>
 <div id="filEnvoyes"></div>
+<div class="filtres"><div><label for="filCoul">Couleur</label><select id="filCoul" onchange="filtrerFil()"></select></div>
+<div><label for="filType">Type</label><select id="filType" onchange="filtrerFil()"></select></div>
+<div><label for="filMarque">Marque</label><select id="filMarque" onchange="filtrerFil()"></select></div></div>
+<button id="filTout" onclick="toutAfficherFil()">Tout afficher</button>
 <h2 id="filResume">Bobines</h2><div class="aide modif" style="margin:-4px 0 8px">Touche une bobine pour corriger ce qu'il reste.</div><div id="filListe"></div></div>
 <div id="fNouv" class="plein"><div class="tete"><b>＋ Nouvelle bobine</b><button onclick="fermer('fNouv')">Fermer</button></div>
 <div class="deux2"><div><label class="l" for="nbType">Type</label><input class="champ" id="nbType" list="lTypes" value="PLA" autocomplete="off"></div>
@@ -435,16 +443,48 @@ function carteBobine(b, enfant, alt) {
     '<div class="barre"><i style="width:' + pct + '%"></i></div></div></div>';
 }
 function basculerGroupe(cle) { GROUPES_OUVERTS[cle] = !GROUPES_OUVERTS[cle]; listeFil(); }
+// Filtres (comme sur le PC) : couleur, type de filament, marque. "" = tout afficher.
+var FILTRE = {coul: "", type: "", marque: ""};
+function nFiltre(x) { return (x || "").trim().toLowerCase(); }
+function valeursFiltre(bs, cle) {
+  var vus = {}, l = [];
+  bs.forEach(function (b) { var v = (b[cle] || "").trim(); if (v && !vus[nFiltre(v)]) { vus[nFiltre(v)] = 1; l.push(v); } });
+  return l.sort(function (x, y) { return x.localeCompare(y, "fr"); });
+}
+function remplirFiltre(id, titre, valeurs, courant) {
+  var sel = document.getElementById(id);
+  if (!sel) return;
+  var sig = valeurs.join("\u0001") + "\u0002" + courant;
+  if (sel.getAttribute("data-sig") === sig) return;      // rien n'a changé : on ne touche pas à la liste (elle peut être ouverte)
+  sel.setAttribute("data-sig", sig);
+  sel.innerHTML = '<option value="">' + titre + '</option>' + valeurs.map(function (v) {
+    return '<option value="' + esc(v) + '"' + (nFiltre(v) === nFiltre(courant) ? " selected" : "") + '>' + esc(v) + '</option>';
+  }).join("");
+}
+function filtrerFil() {
+  FILTRE.coul = document.getElementById("filCoul").value; FILTRE.type = document.getElementById("filType").value;
+  FILTRE.marque = document.getElementById("filMarque").value; listeFil();
+}
+function toutAfficherFil() { FILTRE = {coul: "", type: "", marque: ""}; listeFil(); }
 function listeFil() {
-  var bs = (ETAT && ETAT.bobines) || [], z = document.getElementById("filListe");
+  var tous = (ETAT && ETAT.bobines) || [], z = document.getElementById("filListe");
   if (!z) return;
+  remplirFiltre("filCoul", "Toutes", valeursFiltre(tous, "couleur"), FILTRE.coul);
+  remplirFiltre("filType", "Tous", valeursFiltre(tous, "matiere"), FILTRE.type);
+  remplirFiltre("filMarque", "Toutes", valeursFiltre(tous, "marque"), FILTRE.marque);
+  var filtre = !!(FILTRE.coul || FILTRE.type || FILTRE.marque);
+  document.getElementById("filTout").style.display = filtre ? "block" : "none";
+  var bs = tous.filter(function (b) {
+    return (!FILTRE.coul || nFiltre(b.couleur) === nFiltre(FILTRE.coul)) && (!FILTRE.type || nFiltre(b.matiere) === nFiltre(FILTRE.type)) &&
+      (!FILTRE.marque || nFiltre(b.marque) === nFiltre(FILTRE.marque));
+  });
   var groupes = {}, ordre = [];
   bs.forEach(function (b) { var k = cleGroupe(b); if (!groupes[k]) { groupes[k] = []; ordre.push(k); } groupes[k].push(b); });
   ordre.sort(function (x, y) { return groupes[x][0].nom.localeCompare(groupes[y][0].nom, "fr"); });
   ORDRE_GROUPES = ordre;
   var bas = ordre.filter(function (k) { return groupes[k].some(function (b) { return b.bas; }); }).length;
   document.getElementById("filResume").textContent = bs.length + " bobine" + (bs.length > 1 ? "s" : "") +
-    (bas ? " · " + bas + " à racheter" : "");
+    (filtre ? " sur " + tous.length : "") + (bas ? " · " + bas + " à racheter" : "");
   z.innerHTML = bs.length ? ordre.map(function (k, rang) {
     var alt = rang % 2 === 1;      // une ligne sur deux d'une autre teinte
     var g = groupes[k].slice().sort(function (x, y) { return (estNeuve(x) - estNeuve(y)) || (x.restant - y.restant) || (x.id - y.id); });
@@ -461,7 +501,7 @@ function listeFil() {
       '<div class="g">' + detail.join(" + ") + (basG ? " · à racheter" : "") + '</div>' +
       '<div class="g">Total : ' + total + ' g</div></div><div class="fleche">' + (ouvert ? "▾" : "▸") + '</div></div>' +
       (ouvert ? '<div class="enfants' + (alt ? " alt" : "") + '">' + g.map(function (b) { return carteBobine(b, true, alt); }).join("") + '</div>' : "");
-  }).join("") : '<div class="vide">Aucune bobine enregistrée sur le PC.</div>';
+  }).join("") : '<div class="vide">' + (filtre ? "Aucune bobine ne correspond à ces filtres." : "Aucune bobine enregistrée sur le PC.") + '</div>';
 }
 var BOB_ENVOYEES = [];
 function montrerEnvoyes() {
