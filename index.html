@@ -29,6 +29,20 @@ h1 span{color:var(--accent)}
 button{background:var(--panneau2);color:var(--texte);border:1px solid var(--accent);border-radius:8px;font:inherit;font-size:14px;padding:9px 16px}
 button:disabled{opacity:.7}
 h2{font-size:11px;letter-spacing:.18em;color:var(--doux);text-transform:uppercase;margin:22px 0 8px}
+.seulement-lecture{display:none}
+body.lecture .seulement-lecture{display:block}
+#fDem .bloc{border:1px solid var(--bord);border-radius:10px;padding:8px 12px 12px;margin:14px 0;background:var(--panneau)}
+#fDem .bloc h3{margin:6px 0 2px;text-align:center;font-size:15px;letter-spacing:.04em}
+#fDem .cases{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}
+#fDem .cases label{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--texte)}
+#fDem .cases input{width:22px;height:22px;flex:none;accent-color:var(--accent)}
+#fDem .dim{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#fDem .dim input{min-width:0}
+#fDem .obj{border-top:1px dashed var(--bord);margin-top:10px;padding-top:4px}
+#fDem .att{color:var(--jaune);font-size:13px;margin:8px 0}
+#fDem .choix button{display:block;width:100%;margin-top:14px;padding:16px;font-weight:700;font-size:16px}
+#demMsg{color:#ffb3c0;font-size:13px;margin-top:10px}
+#demOk{background:#0d2a17;border:1px solid var(--ok);color:#9cf0b8;border-radius:10px;padding:12px;margin:10px 0;font-size:15px}
 body.lecture .modif{display:none!important}
 .lect{display:none;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--jaune);border:1px solid var(--jaune);border-radius:999px;padding:2px 8px;margin-left:8px;vertical-align:middle}
 body.lecture .lect{display:inline-block}
@@ -178,8 +192,15 @@ label.photo input{display:none}
 <body>
 <header><h1>MKLM<span>3D</span><em class="lect">LECTURE SEULE</em></h1><div><div class="maj" id="maj"></div><div class="maj" id="lu"></div><div class="maj" id="version"></div></div></header>
 <div id="alerte"></div>
+<button class="grosbouton seulement-lecture" id="bDemande" style="margin:0 0 12px;border-color:var(--ok)" onclick="ouvrirDemande()">✎ Demande de commande</button>
 <div id="contenu"></div>
 <p class="bas"><button id="bFil" onclick="ouvrirFil()">◎ Filaments</button><button id="bProd" onclick="ouvrirProd()">◫ Produits</button><button id="bRepos" onclick="ouvrirRepos()">☾ Repos</button><button id="bouton" onclick="actualiser()">Actualiser</button></p>
+<div id="fDem" class="plein"><div class="tete"><b>✎ Demande de commande</b><button onclick="fermerDemande()">Fermer</button></div>
+<div id="demOk" style="display:none"></div>
+<div id="demChoix" class="choix"><div class="aide">Quel formulaire veux-tu remplir ?</div>
+<button onclick="choisirDemande(1)">Demande de devis ou de commande</button>
+<button onclick="choisirDemande(2)">Commande boule de Noël</button></div>
+<div id="demF1" style="display:none"></div><div id="demF2" style="display:none"></div></div>
 <div id="fFil" class="plein"><div class="tete"><b>◎ Stock de filament</b><button onclick="fermer('fFil')">Fermer</button></div>
 <div class="deux2 modif"><div><button class="grosbouton ok" onclick="ouvrirNouvelle()">＋ Nouvelle bobine</button></div>
 <div><button class="grosbouton" onclick="ouvrirCoul()">📷 Couleur (photo)</button></div></div>
@@ -269,7 +290,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "25.11 b";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "26.11 a";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -948,9 +969,170 @@ function retirerRepos(iso) {
   });
 }
 
+
+// ---------- « Demande de commande » (lien en lecture seule : seule chose que ce lien peut envoyer)
+var DEM = {rid: {}, envoi: false};
+function dChamp(id, nom, type) { return '<label class="l" for="' + id + '">' + nom + '</label><input class="champ" id="' + id + '" type="' + (type || "text") + '" autocomplete="off">'; }
+function dCase(id, nom) { return '<label><input type="checkbox" id="' + id + '">' + nom + '</label>'; }
+function dIdentite(p) {
+  return '<div class="deux2"><div>' + dChamp(p + "Nom", "Nom") + '</div><div>' + dChamp(p + "Prenom", "Prénom") + '</div></div>' +
+    dChamp(p + "Adresse", "Adresse") +
+    '<div class="deux2"><div>' + dChamp(p + "Cp", "CP") + '</div><div>' + dChamp(p + "Ville", "Ville") + '</div></div>' +
+    '<div class="deux2"><div>' + dChamp(p + "Tel", "N° de téléphone", "tel") + '</div><div>' + dChamp(p + "Mail", "Email", "email") + '</div></div>' +
+    '<div class="cases">' + dCase(p + "News", "J'accepte de recevoir une newsletter par e-mail pour me tenir informé des nouveautés") + '</div>';
+}
+function dLivraisonReglement(p, f1) {
+  var liv = f1
+    ? '<div class="cases">' + dCase(p + "Chercher", "A venir chercher :") + dCase(p + "Mairie", "A la mairie") + dCase(p + "Notre", "A notre domicile") + '</div>' +
+      '<div class="cases">' + dCase(p + "Livrer", "A livrer : (frais à votre charge)") + dCase(p + "Relais", "En relais colis") + dCase(p + "Votre", "A votre domicile") + '</div>'
+    : '<div class="cases">' + dCase(p + "Chercher", "A venir chercher :") + dCase(p + "Mairie", "A la mairie") + dCase(p + "Notre", "A notre domicile") + '</div>' +
+      '<div class="cases">' + dCase(p + "Relais", "A livrer en relais colis") + dCase(p + "Votre", "A livrer à votre domicile") + '</div>';
+  return '<div class="bloc"><h3>Mode de livraison</h3>' + liv +
+    '<div class="att">▲ Attention livraison qu\'en France et dans les DOM-TOM</div>' + dChamp(p + "Recep", "Date de réception souhaitée (facultatif)") + '</div>' +
+    '<div class="bloc"><h3>Mode de règlement</h3><div class="cases">' + dCase(p + "Acompte", "Acompte de 30% soit de") + '</div>' + dChamp(p + "AcompteMt", "Montant de l'acompte") +
+    '<div class="cases">' + dCase(p + "Place", "Réglé sur place") + dCase(p + "Cb", "Carte bleu") + dCase(p + "Esp", "Espèce") + dCase(p + "Vir", "Virement") + '</div></div>';
+}
+function construireDemande() {
+  var a = '<div class="cases">' + dCase("d1Devis", "Devis") + dCase("d1Commande", "Commande") + '</div>' + dChamp("d1Date", "Date") +
+    '<div class="deux2"><div>' + dChamp("d1Societe", "Société") + '</div><div>' + dChamp("d1Siret", "N° SIRET") + '</div></div>' + dIdentite("d1") +
+    '<div class="bloc"><h3>Description de l\'objet</h3>';
+  for (var i = 1; i <= 4; i++) {
+    a += '<div class="obj">' + dChamp("d1O" + i, "Objet " + i) + '<div class="deux2"><div>' + dChamp("d1Q" + i, "Quantité", "number") + '</div><div>' + dChamp("d1C" + i, "Couleur") + '</div></div>' +
+      '<label class="l">Dimensions en cm</label><div class="dim"><input class="champ" id="d1H' + i + '" placeholder="Hauteur" inputmode="decimal"><input class="champ" id="d1L' + i + '" placeholder="Largeur" inputmode="decimal">' +
+      '<input class="champ" id="d1Lg' + i + '" placeholder="Longueur" inputmode="decimal"><input class="champ" id="d1D' + i + '" placeholder="Diamètre" inputmode="decimal"></div></div>';
+  }
+  a += '<label class="l">Utilisation de l\'objet :</label><div class="cases">' + dCase("d1Int", "Intérieur") + dCase("d1Ext", "Extérieur") + '</div>' +
+    '<label class="l">L\'objet doit être</label><div class="cases">' + dCase("d1Uv", "Résistant aux U.V.") + dCase("d1Temp", "Température extrême") + dCase("d1Flex", "Flexible") + dCase("d1Sol", "Solide") + '</div></div>' +
+    dLivraisonReglement("d1", true) +
+    '<div id="demMsg1" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn1" onclick="envoyerDemande(1)">Envoyer la demande</button>' +
+    '<button class="grosbouton" onclick="retourDemande()">Retour</button>';
+  document.getElementById("demF1").innerHTML = a;
+  var b = '<h2 style="text-align:center;font-size:15px;letter-spacing:.04em;color:var(--texte);text-transform:none">Commande boule de Noël</h2>' + dIdentite("d2") +
+    '<div class="bloc"><h3>Description de l\'objet</h3>' +
+    '<div class="cases">' + dCase("d2T1", "1 Boule de Noël Tournante = 4 €") + '</div><div class="cases">' + dCase("d2T5", "5 Boules de Noël Tournante = 15 €") + '</div>' +
+    '<div class="cases">' + dCase("d2S1", "1 Boule de Noël Statique = 2,5 €") + '</div><div class="cases">' + dCase("d2S5", "5 Boules de Noël Statique = 10 €") + '</div>';
+  for (var j = 1; j <= 5; j++) {
+    b += '<div class="obj">' + dChamp("d2P" + j, "Prénoms") + '<label class="l">Couleur :</label><div class="cases">' + dCase("d2Or" + j, "Or") + dCase("d2Bl" + j, "Blanc") + dCase("d2Ro" + j, "Rouge") + dCase("d2Ve" + j, "Vert") + '</div></div>';
+  }
+  b += '</div>' + dLivraisonReglement("d2", false) +
+    '<div id="demMsg2" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn2" onclick="envoyerDemande(2)">Envoyer la demande</button>' +
+    '<button class="grosbouton" onclick="retourDemande()">Retour</button>';
+  document.getElementById("demF2").innerHTML = b;
+  ["d1Devis", "d1Commande"].forEach(function (id) {       // une seule des deux cases : Devis ou Commande
+    document.getElementById(id).onchange = function () { if (this.checked) document.getElementById(id === "d1Devis" ? "d1Commande" : "d1Devis").checked = false; };
+  });
+}
+function ouvrirDemande() {
+  if (!CONFIG || !LECTURE) return;
+  if (!document.getElementById("demF1").innerHTML) construireDemande();
+  document.getElementById("demOk").style.display = "none";
+  retourDemande();
+  document.getElementById("fDem").className = "plein ouvert";
+}
+function fermerDemande() { document.getElementById("fDem").className = "plein"; }
+function retourDemande() {
+  document.getElementById("demChoix").style.display = "";
+  document.getElementById("demF1").style.display = "none";
+  document.getElementById("demF2").style.display = "none";
+  window.scrollTo(0, 0); document.getElementById("fDem").scrollTop = 0;
+}
+function choisirDemande(n) {
+  document.getElementById("demChoix").style.display = "none";
+  document.getElementById("demF1").style.display = n === 1 ? "" : "none";
+  document.getElementById("demF2").style.display = n === 2 ? "" : "none";
+  document.getElementById("demOk").style.display = "none";
+  document.getElementById("fDem").scrollTop = 0;
+}
+function dV(id) { var e = document.getElementById(id); return e ? e.value.trim() : ""; }
+function dC(id) { var e = document.getElementById(id); return !!(e && e.checked); }
+function dCoches(liste) { return liste.filter(function (x) { return dC(x[0]); }).map(function (x) { return x[1]; }); }
+function dLignesCommunes(p, l) {
+  var nom = (dV(p + "Prenom") + " " + dV(p + "Nom")).trim();
+  if (nom) l.push("Client : " + nom);
+  var adr = [dV(p + "Adresse"), (dV(p + "Cp") + " " + dV(p + "Ville")).trim()].filter(Boolean).join(", ");
+  if (adr) l.push("Adresse : " + adr);
+  if (dV(p + "Tel")) l.push("Téléphone : " + dV(p + "Tel"));
+  if (dV(p + "Mail")) l.push("Email : " + dV(p + "Mail"));
+  if (dC(p + "News")) l.push("Accepte la newsletter : oui");
+}
+function dLivraison(p, l, f1) {
+  var liv = f1
+    ? dCoches([[p + "Chercher", "A venir chercher"], [p + "Mairie", "à la mairie"], [p + "Notre", "à notre domicile"], [p + "Livrer", "A livrer (frais à la charge du client)"], [p + "Relais", "en relais colis"], [p + "Votre", "au domicile du client"]])
+    : dCoches([[p + "Chercher", "A venir chercher"], [p + "Mairie", "à la mairie"], [p + "Notre", "à notre domicile"], [p + "Relais", "A livrer en relais colis"], [p + "Votre", "A livrer au domicile du client"]]);
+  if (liv.length) l.push("Livraison : " + liv.join(", "));
+  if (dV(p + "Recep")) l.push("Date de réception souhaitée : " + dV(p + "Recep"));
+  var reg = dCoches([[p + "Acompte", "Acompte de 30%" + (dV(p + "AcompteMt") ? " soit " + dV(p + "AcompteMt") : "")], [p + "Place", "Réglé sur place"], [p + "Cb", "Carte bleue"], [p + "Esp", "Espèce"], [p + "Vir", "Virement"]]);
+  if (reg.length) l.push("Règlement : " + reg.join(", "));
+}
+function composerDemande(n) {
+  var l = [], erreur = "", client = "", genre = "commande";
+  if (n === 1) {
+    if (!dC("d1Devis") && !dC("d1Commande")) erreur = "Coche « Devis » ou « Commande » en haut du formulaire.";
+    genre = dC("d1Devis") ? "devis" : "commande";
+    l.push((genre === "devis" ? "DEMANDE DE DEVIS" : "DEMANDE DE COMMANDE") + (dV("d1Date") ? " du " + dV("d1Date") : ""));
+    client = dV("d1Societe") || (dV("d1Prenom") + " " + dV("d1Nom")).trim();
+    if (dV("d1Societe")) l.push("Société : " + dV("d1Societe") + (dV("d1Siret") ? " · SIRET " + dV("d1Siret") : ""));
+    dLignesCommunes("d1", l);
+    var objets = 0;
+    for (var i = 1; i <= 4; i++) {
+      if (!dV("d1O" + i)) continue;
+      objets++;
+      var dims = [["H", "d1H"], ["L", "d1L"], ["Lg", "d1Lg"], ["Ø", "d1D"]].filter(function (x) { return dV(x[1] + i); })
+        .map(function (x) { return x[0] + " " + dV(x[1] + i); }).join(" × ");
+      l.push("Objet " + i + " : " + dV("d1O" + i) + (dV("d1Q" + i) ? " · quantité " + dV("d1Q" + i) : "") + (dV("d1C" + i) ? " · couleur " + dV("d1C" + i) : "") + (dims ? " · " + dims + " cm" : ""));
+    }
+    if (!erreur && !objets) erreur = "Décris au moins un objet.";
+    var ut = dCoches([["d1Int", "intérieur"], ["d1Ext", "extérieur"]]); if (ut.length) l.push("Utilisation : " + ut.join(", "));
+    var doit = dCoches([["d1Uv", "résistant aux U.V."], ["d1Temp", "température extrême"], ["d1Flex", "flexible"], ["d1Sol", "solide"]]); if (doit.length) l.push("L'objet doit être : " + doit.join(", "));
+    dLivraison("d1", l, true);
+  } else {
+    l.push("COMMANDE BOULE DE NOËL");
+    client = (dV("d2Prenom") + " " + dV("d2Nom")).trim();
+    dLignesCommunes("d2", l);
+    var choix = dCoches([["d2T1", "1 boule tournante (4 €)"], ["d2T5", "5 boules tournantes (15 €)"], ["d2S1", "1 boule statique (2,5 €)"], ["d2S5", "5 boules statiques (10 €)"]]);
+    if (!erreur && !choix.length) erreur = "Coche au moins une formule (1 ou 5 boules).";
+    if (choix.length) l.push("Formule : " + choix.join(", "));
+    for (var j = 1; j <= 5; j++) {
+      var cou = dCoches([["d2Or" + j, "or"], ["d2Bl" + j, "blanc"], ["d2Ro" + j, "rouge"], ["d2Ve" + j, "vert"]]);
+      if (dV("d2P" + j) || cou.length) l.push("Boule " + j + " : " + (dV("d2P" + j) || "(sans prénom)") + (cou.length ? " · " + cou.join(", ") : ""));
+    }
+    dLivraison("d2", l, false);
+  }
+  if (!erreur && !client) erreur = "Indique au moins le nom.";
+  var texte = l.join("\n");
+  if (!erreur && texte.length > 2400) erreur = "Le texte est trop long : raccourcis un peu les descriptions.";
+  return {erreur: erreur, client: client, genre: genre, texte: texte};
+}
+function nouvelIdDemande() {
+  var c = "abcdefghijklmnopqrstuvwxyz0123456789", r = "", i, t = new Uint8Array(20);
+  try { crypto.getRandomValues(t); } catch (e) { for (i = 0; i < 20; i++) t[i] = Math.floor(Math.random() * 256); }
+  for (i = 0; i < 20; i++) r += c.charAt(t[i] % c.length);
+  return r;
+}
+function envoyerDemande(n) {
+  if (DEM.envoi) return;
+  var m = document.getElementById("demMsg" + n), b = document.getElementById("demBtn" + n);
+  var d = composerDemande(n);
+  if (d.erreur) { m.textContent = d.erreur; return; }
+  m.textContent = "";
+  if (!DEM.rid[n]) DEM.rid[n] = nouvelIdDemande();       // même numéro si on réessaie : jamais deux commandes pour la même demande
+  DEM.envoi = true; b.disabled = true; b.textContent = "Envoi…";
+  function fini() { DEM.envoi = false; b.disabled = false; b.textContent = "Envoyer la demande"; }
+  envoyerAction("&action=demande&rid=" + DEM.rid[n] + "&forme=" + n + "&genre=" + d.genre + "&client=" + encodeURIComponent(d.client) +
+                "&texte=" + encodeURIComponent(d.texte),
+    function () {
+      fini(); DEM.rid[n] = null;
+      document.getElementById("demF" + n).innerHTML = ""; if (n === 1 || n === 2) { document.getElementById("demF1").innerHTML = ""; document.getElementById("demF2").innerHTML = ""; construireDemande(); }
+      retourDemande();
+      var ok = document.getElementById("demOk");
+      ok.textContent = "Ta demande est envoyée. Elle arrive sur le carnet dans quelques minutes."; ok.style.display = "";
+    },
+    function () { fini(); m.textContent = "La demande n'est pas partie. Vérifie le réseau puis touche de nouveau « Envoyer la demande »."; }, true);
+}
+
 // Envoie une action au script Google (le Carnet du PC la prend dans la minute).
-function envoyerAction(extra, ok, ko) {
-  if (LECTURE) { if (ko) ko(); return; }     // lien consultation : aucune modification
+function envoyerAction(extra, ok, ko, permettre) {
+  if (LECTURE && !permettre) { if (ko) ko(); return; }     // lien consultation : aucune modification (sauf « Demande de commande »)
   var fini = false;
   function reussi(d) {
     if (fini) return; fini = true;
