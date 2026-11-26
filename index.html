@@ -295,7 +295,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "26.11 j";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "26.11 k";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -524,7 +524,7 @@ function listeFil() {
     var bas = r.total < seuilG, c = bas ? "var(--retard)" : "var(--accent)", pc = Math.max(3, Math.min(100, Math.round(r.total / 10)));
     return '<div style="position:relative;background:#0d151f;border:1px solid ' + (bas ? "#5b1f2d" : "#1b2836") + ';border-radius:10px;padding:10px 12px;overflow:hidden">' +
       '<i style="position:absolute;left:0;top:0;width:30px;height:2px;background:' + c + '"></i>' +
-      '<div style="font-size:12px;margin-top:2px">' + esc(r.nom) + '</div>' +
+      '<div style="font-size:12px;margin-top:2px">' + esc(r.nom.replace(/^PLA /, "")) + '</div>' +
       '<div style="font-size:20px;font-weight:600;margin-top:4px;color:' + (bas ? "#ff8da1" : "inherit") + '">' + r.total + ' g</div>' +
       '<div style="height:5px;border-radius:3px;background:#1b2836;margin:6px 0 6px;overflow:hidden"><i style="display:block;height:100%;width:' + pc + '%;background:' + c + '"></i></div>' +
       '<div style="font-size:11px;color:#9fb0c1">' + r.ent.length + ' entamée' + (r.ent.length > 1 ? "s" : "") + (bas ? ' · <span style="color:#ff8da1">presque vide</span>' : "") + '</div></div>';
