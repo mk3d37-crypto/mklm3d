@@ -295,7 +295,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "26.11 m";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "26.11 n";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -457,7 +457,8 @@ function envoyerPaye() {
 }
 function ouvrirProd() { if (!CONFIG) return; listeProd(); ouvrir("fProd"); }
 var TEINTES_ENVOYEES = {};
-var GROUPES_OUVERTS = {}, ORDRE_GROUPES = [];
+var GROUPES_OUVERTS = {}, ORDRE_GROUPES = [], RECO_REPLIE = false;
+function basculerReco() { RECO_REPLIE = !RECO_REPLIE; listeFil(); }
 function cleGroupe(b) { if (b.groupe) return b.groupe.toLowerCase(); return [b.matiere, b.couleur, b.marque].map(function (x) { return (x || "").trim().toLowerCase(); }).join("|"); }
 function nomGroupe(g) { var p = g.filter(function (b) { return b.propre && b.propre.toLowerCase() === (b.groupe || "").toLowerCase(); })[0]; return (p || g[0]).nom; }
 function estNeuve(b) { return b.neuve !== undefined ? b.neuve : b.restant >= (b.initial || 0) - 0.5; }
@@ -530,11 +531,11 @@ function listeFil() {
       '<div style="height:3px;border-radius:2px;background:#1b2836;margin:3px 0;overflow:hidden"><i style="display:block;height:100%;width:' + pc + '%;background:' + c + '"></i></div>' +
       '<div style="font-size:10px;color:#9fb0c1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + tag + '</div></div>';
   };
-  var blocReco = reco.length ? '<div class="reco" style="margin:0 0 12px"><div style="display:flex;align-items:center;gap:8px;margin:0 0 8px">' +
-    '<div style="width:26px;height:26px;border-radius:7px;background:#2a1a0a;border:1px solid #6b3d0f;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:13px">▲</div>' +
+  var blocReco = reco.length ? '<div class="reco" style="margin:0 0 12px"><div onclick="basculerReco()" style="display:flex;align-items:center;gap:8px;margin:0 0 8px;cursor:pointer">' +
+    '<div style="width:26px;height:26px;border-radius:7px;background:#2a1a0a;border:1px solid #6b3d0f;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:13px">' + (RECO_REPLIE ? "▼" : "▲") + '</div>' +
     '<div><div style="font-size:10px;letter-spacing:.14em;color:#7f8c99">À RECOMMANDER</div><div style="font-size:14px;font-weight:600">' + reco.length + ' couleur' + (reco.length > 1 ? "s" : "") + ' à recommander</div></div></div>' +
-    '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">' + reco.slice(0, 12).map(carteReco).join("") + '</div>' +
-    (reco.length > 12 ? '<div style="font-size:12px;opacity:.7;margin-top:6px">… et ' + (reco.length - 12) + ' autres</div>' : "") + '</div>' : "";
+    (RECO_REPLIE ? "" : '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">' + reco.slice(0, 12).map(carteReco).join("") + '</div>') +
+    (!RECO_REPLIE && reco.length > 12 ? '<div style="font-size:12px;opacity:.7;margin-top:6px">… et ' + (reco.length - 12) + ' autres</div>' : "") + '</div>' : "";
   z.innerHTML = blocReco + (bs.length ? ordre.map(function (k, rang) {
     var alt = rang % 2 === 1;      // une ligne sur deux d'une autre teinte
     var g = groupes[k].slice().sort(function (x, y) { return (estNeuve(x) - estNeuve(y)) || (x.restant - y.restant) || (x.id - y.id); });
