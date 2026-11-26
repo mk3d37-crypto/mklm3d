@@ -290,7 +290,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "26.11 c";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "26.11 d";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -984,7 +984,8 @@ function construireDemande() {
   }
   a += '<label class="l">Utilisation de l\'objet :</label><div class="cases">' + dCase("d1Int", "Intérieur") + dCase("d1Ext", "Extérieur") + '</div>' +
     '<label class="l">L\'objet doit être</label><div class="cases">' + dCase("d1Uv", "Résistant aux U.V.") + dCase("d1Temp", "Température extrême") + dCase("d1Flex", "Flexible") + dCase("d1Sol", "Solide") + '</div>' +
-    '<label class="l">Plateau d\'impression</label><div class="cases">' + dCase("d1PLisse", "Plateau lisse") + dCase("d1PTexture", "Plateau texturé") + dCase("d1PCarbone", "Plateau carbone") + '</div></div>' +
+    '<label class="l">Plateau d\'impression</label><div class="cases">' + dCase("d1PLisse", "Plateau lisse") + dCase("d1PTexture", "Plateau texturé") + dCase("d1PCarbone", "Plateau carbone") + '</div>' +
+    '<label class="l">Qualité d\'impression (obligatoire)</label><div class="cases">' + dCase("d1QNormale", "Qualité normale") + dCase("d1QSup", "Qualité supérieure") + dCase("d1QExtreme", "Qualité extrême") + '</div></div>' +
     '<div id="demMsg1" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn1" onclick="envoyerDemande(1)">Envoyer la demande</button>' +
     '<button class="grosbouton" onclick="retourDemande()">Retour</button>';
   document.getElementById("demF1").innerHTML = a;
@@ -999,6 +1000,9 @@ function construireDemande() {
     '<div id="demMsg2" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn2" onclick="envoyerDemande(2)">Envoyer la demande</button>' +
     '<button class="grosbouton" onclick="retourDemande()">Retour</button>';
   document.getElementById("demF2").innerHTML = b;
+  ["d1QNormale", "d1QSup", "d1QExtreme"].forEach(function (id, k, tous) {       // une seule qualité à la fois
+    document.getElementById(id).onchange = function () { if (this.checked) tous.forEach(function (autre) { if (autre !== id) document.getElementById(autre).checked = false; }); };
+  });
   ["d1Devis", "d1Commande"].forEach(function (id) {       // une seule des deux cases : Devis ou Commande
     document.getElementById(id).onchange = function () { if (this.checked) document.getElementById(id === "d1Devis" ? "d1Commande" : "d1Devis").checked = false; };
   });
@@ -1045,6 +1049,8 @@ function composerDemande(n) {
     if (!erreur && !objets) erreur = "Décris au moins un objet.";
     var ut = dCoches([["d1Int", "intérieur"], ["d1Ext", "extérieur"]]); if (ut.length) l.push("Utilisation : " + ut.join(", "));
     var doit = dCoches([["d1Uv", "résistant aux U.V."], ["d1Temp", "température extrême"], ["d1Flex", "flexible"], ["d1Sol", "solide"]]); if (doit.length) l.push("L'objet doit être : " + doit.join(", "));
+    if (!erreur && !dC("d1QNormale") && !dC("d1QSup") && !dC("d1QExtreme")) erreur = "Choisis la qualité d'impression (normale, supérieure ou extrême).";
+    l.push("Qualité : " + (dC("d1QExtreme") ? "extrême (buse 0,2 · couche la plus fine · Prusa XL)" : dC("d1QSup") ? "supérieure (buse 0,4 · couche la plus fine · Prusa XL)" : "normale (buse 0,4 · couche 0,2)"));
     var pl = dCoches([["d1PLisse", "lisse"], ["d1PTexture", "texturé"], ["d1PCarbone", "carbone"]]); if (pl.length) l.push("Plateau : " + pl.join(", "));
     client = client ? ((genre === "devis" ? "Devis : " : "Commande : ") + client) : "";
   } else {
