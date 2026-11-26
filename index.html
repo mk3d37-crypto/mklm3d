@@ -295,7 +295,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "26.11 i";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "26.11 j";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -520,9 +520,20 @@ function listeFil() {
     return {nom: nomGroupe(tousG[k]), ent: tousG[k].map(function (b) { return b.restant; }), total: tousG[k].reduce(function (s, b) { return s + b.restant; }, 0)};
   }).sort(function (x, y) { return (x.total - y.total) || x.nom.localeCompare(y.nom, "fr"); });
   var seuilG = (ETAT && ETAT.seuil) || 200;
-  var blocReco = reco.length ? '<div class="reco" style="background:#2a0d14;border:1px solid var(--retard);border-radius:10px;padding:8px 10px;margin:0 0 10px"><div style="font-weight:600;margin:0 0 4px">À recommander : plus de bobine neuve (' + reco.length + ')</div>' +
-    reco.slice(0, 10).map(function (r) { return '<div style="font-size:13px;line-height:1.6' + (r.total < seuilG ? ';color:#ffb3c0' : '') + '">' + esc(r.nom) + ' · ' + r.ent.join(", ") + ' g</div>'; }).join("") +
-    (reco.length > 10 ? '<div style="font-size:12px;opacity:.7">… et ' + (reco.length - 10) + ' autres</div>' : "") + '</div>' : "";
+  var carteReco = function (r) {
+    var bas = r.total < seuilG, c = bas ? "var(--retard)" : "var(--accent)", pc = Math.max(3, Math.min(100, Math.round(r.total / 10)));
+    return '<div style="position:relative;background:#0d151f;border:1px solid ' + (bas ? "#5b1f2d" : "#1b2836") + ';border-radius:10px;padding:10px 12px;overflow:hidden">' +
+      '<i style="position:absolute;left:0;top:0;width:30px;height:2px;background:' + c + '"></i>' +
+      '<div style="font-size:12px;margin-top:2px">' + esc(r.nom) + '</div>' +
+      '<div style="font-size:20px;font-weight:600;margin-top:4px;color:' + (bas ? "#ff8da1" : "inherit") + '">' + r.total + ' g</div>' +
+      '<div style="height:5px;border-radius:3px;background:#1b2836;margin:6px 0 6px;overflow:hidden"><i style="display:block;height:100%;width:' + pc + '%;background:' + c + '"></i></div>' +
+      '<div style="font-size:11px;color:#9fb0c1">' + r.ent.length + ' entamée' + (r.ent.length > 1 ? "s" : "") + (bas ? ' · <span style="color:#ff8da1">presque vide</span>' : "") + '</div></div>';
+  };
+  var blocReco = reco.length ? '<div class="reco" style="margin:0 0 12px"><div style="display:flex;align-items:center;gap:8px;margin:0 0 8px">' +
+    '<div style="width:26px;height:26px;border-radius:7px;background:#2a1a0a;border:1px solid #6b3d0f;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:13px">▲</div>' +
+    '<div><div style="font-size:10px;letter-spacing:.14em;color:#7f8c99">À RECOMMANDER</div><div style="font-size:14px;font-weight:600">' + reco.length + ' couleur' + (reco.length > 1 ? "s" : "") + ' sans neuve</div></div></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">' + reco.slice(0, 10).map(carteReco).join("") + '</div>' +
+    (reco.length > 10 ? '<div style="font-size:12px;opacity:.7;margin-top:6px">… et ' + (reco.length - 10) + ' autres</div>' : "") + '</div>' : "";
   z.innerHTML = blocReco + (bs.length ? ordre.map(function (k, rang) {
     var alt = rang % 2 === 1;      // une ligne sur deux d'une autre teinte
     var g = groupes[k].slice().sort(function (x, y) { return (estNeuve(x) - estNeuve(y)) || (x.restant - y.restant) || (x.id - y.id); });
