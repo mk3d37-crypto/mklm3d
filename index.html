@@ -290,7 +290,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "26.11 a";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "26.11 c";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -974,27 +974,8 @@ function retirerRepos(iso) {
 var DEM = {rid: {}, envoi: false};
 function dChamp(id, nom, type) { return '<label class="l" for="' + id + '">' + nom + '</label><input class="champ" id="' + id + '" type="' + (type || "text") + '" autocomplete="off">'; }
 function dCase(id, nom) { return '<label><input type="checkbox" id="' + id + '">' + nom + '</label>'; }
-function dIdentite(p) {
-  return '<div class="deux2"><div>' + dChamp(p + "Nom", "Nom") + '</div><div>' + dChamp(p + "Prenom", "Prénom") + '</div></div>' +
-    dChamp(p + "Adresse", "Adresse") +
-    '<div class="deux2"><div>' + dChamp(p + "Cp", "CP") + '</div><div>' + dChamp(p + "Ville", "Ville") + '</div></div>' +
-    '<div class="deux2"><div>' + dChamp(p + "Tel", "N° de téléphone", "tel") + '</div><div>' + dChamp(p + "Mail", "Email", "email") + '</div></div>' +
-    '<div class="cases">' + dCase(p + "News", "J'accepte de recevoir une newsletter par e-mail pour me tenir informé des nouveautés") + '</div>';
-}
-function dLivraisonReglement(p, f1) {
-  var liv = f1
-    ? '<div class="cases">' + dCase(p + "Chercher", "A venir chercher :") + dCase(p + "Mairie", "A la mairie") + dCase(p + "Notre", "A notre domicile") + '</div>' +
-      '<div class="cases">' + dCase(p + "Livrer", "A livrer : (frais à votre charge)") + dCase(p + "Relais", "En relais colis") + dCase(p + "Votre", "A votre domicile") + '</div>'
-    : '<div class="cases">' + dCase(p + "Chercher", "A venir chercher :") + dCase(p + "Mairie", "A la mairie") + dCase(p + "Notre", "A notre domicile") + '</div>' +
-      '<div class="cases">' + dCase(p + "Relais", "A livrer en relais colis") + dCase(p + "Votre", "A livrer à votre domicile") + '</div>';
-  return '<div class="bloc"><h3>Mode de livraison</h3>' + liv +
-    '<div class="att">▲ Attention livraison qu\'en France et dans les DOM-TOM</div>' + dChamp(p + "Recep", "Date de réception souhaitée (facultatif)") + '</div>' +
-    '<div class="bloc"><h3>Mode de règlement</h3><div class="cases">' + dCase(p + "Acompte", "Acompte de 30% soit de") + '</div>' + dChamp(p + "AcompteMt", "Montant de l'acompte") +
-    '<div class="cases">' + dCase(p + "Place", "Réglé sur place") + dCase(p + "Cb", "Carte bleu") + dCase(p + "Esp", "Espèce") + dCase(p + "Vir", "Virement") + '</div></div>';
-}
 function construireDemande() {
-  var a = '<div class="cases">' + dCase("d1Devis", "Devis") + dCase("d1Commande", "Commande") + '</div>' + dChamp("d1Date", "Date") +
-    '<div class="deux2"><div>' + dChamp("d1Societe", "Société") + '</div><div>' + dChamp("d1Siret", "N° SIRET") + '</div></div>' + dIdentite("d1") +
+  var a = '<div class="cases">' + dCase("d1Devis", "Devis") + dCase("d1Commande", "Commande") + '</div>' +
     '<div class="bloc"><h3>Description de l\'objet</h3>';
   for (var i = 1; i <= 4; i++) {
     a += '<div class="obj">' + dChamp("d1O" + i, "Objet " + i) + '<div class="deux2"><div>' + dChamp("d1Q" + i, "Quantité", "number") + '</div><div>' + dChamp("d1C" + i, "Couleur") + '</div></div>' +
@@ -1002,19 +983,19 @@ function construireDemande() {
       '<input class="champ" id="d1Lg' + i + '" placeholder="Longueur" inputmode="decimal"><input class="champ" id="d1D' + i + '" placeholder="Diamètre" inputmode="decimal"></div></div>';
   }
   a += '<label class="l">Utilisation de l\'objet :</label><div class="cases">' + dCase("d1Int", "Intérieur") + dCase("d1Ext", "Extérieur") + '</div>' +
-    '<label class="l">L\'objet doit être</label><div class="cases">' + dCase("d1Uv", "Résistant aux U.V.") + dCase("d1Temp", "Température extrême") + dCase("d1Flex", "Flexible") + dCase("d1Sol", "Solide") + '</div></div>' +
-    dLivraisonReglement("d1", true) +
+    '<label class="l">L\'objet doit être</label><div class="cases">' + dCase("d1Uv", "Résistant aux U.V.") + dCase("d1Temp", "Température extrême") + dCase("d1Flex", "Flexible") + dCase("d1Sol", "Solide") + '</div>' +
+    '<label class="l">Plateau d\'impression</label><div class="cases">' + dCase("d1PLisse", "Plateau lisse") + dCase("d1PTexture", "Plateau texturé") + dCase("d1PCarbone", "Plateau carbone") + '</div></div>' +
     '<div id="demMsg1" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn1" onclick="envoyerDemande(1)">Envoyer la demande</button>' +
     '<button class="grosbouton" onclick="retourDemande()">Retour</button>';
   document.getElementById("demF1").innerHTML = a;
-  var b = '<h2 style="text-align:center;font-size:15px;letter-spacing:.04em;color:var(--texte);text-transform:none">Commande boule de Noël</h2>' + dIdentite("d2") +
+  var b = '<h2 style="text-align:center;font-size:15px;letter-spacing:.04em;color:var(--texte);text-transform:none">Commande boule de Noël</h2>' +
     '<div class="bloc"><h3>Description de l\'objet</h3>' +
     '<div class="cases">' + dCase("d2T1", "1 Boule de Noël Tournante = 4 €") + '</div><div class="cases">' + dCase("d2T5", "5 Boules de Noël Tournante = 15 €") + '</div>' +
     '<div class="cases">' + dCase("d2S1", "1 Boule de Noël Statique = 2,5 €") + '</div><div class="cases">' + dCase("d2S5", "5 Boules de Noël Statique = 10 €") + '</div>';
   for (var j = 1; j <= 5; j++) {
     b += '<div class="obj">' + dChamp("d2P" + j, "Prénoms") + '<label class="l">Couleur :</label><div class="cases">' + dCase("d2Or" + j, "Or") + dCase("d2Bl" + j, "Blanc") + dCase("d2Ro" + j, "Rouge") + dCase("d2Ve" + j, "Vert") + '</div></div>';
   }
-  b += '</div>' + dLivraisonReglement("d2", false) +
+  b += '</div>' +
     '<div id="demMsg2" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn2" onclick="envoyerDemande(2)">Envoyer la demande</button>' +
     '<button class="grosbouton" onclick="retourDemande()">Retour</button>';
   document.getElementById("demF2").innerHTML = b;
@@ -1046,37 +1027,17 @@ function choisirDemande(n) {
 function dV(id) { var e = document.getElementById(id); return e ? e.value.trim() : ""; }
 function dC(id) { var e = document.getElementById(id); return !!(e && e.checked); }
 function dCoches(liste) { return liste.filter(function (x) { return dC(x[0]); }).map(function (x) { return x[1]; }); }
-function dLignesCommunes(p, l) {
-  var nom = (dV(p + "Prenom") + " " + dV(p + "Nom")).trim();
-  if (nom) l.push("Client : " + nom);
-  var adr = [dV(p + "Adresse"), (dV(p + "Cp") + " " + dV(p + "Ville")).trim()].filter(Boolean).join(", ");
-  if (adr) l.push("Adresse : " + adr);
-  if (dV(p + "Tel")) l.push("Téléphone : " + dV(p + "Tel"));
-  if (dV(p + "Mail")) l.push("Email : " + dV(p + "Mail"));
-  if (dC(p + "News")) l.push("Accepte la newsletter : oui");
-}
-function dLivraison(p, l, f1) {
-  var liv = f1
-    ? dCoches([[p + "Chercher", "A venir chercher"], [p + "Mairie", "à la mairie"], [p + "Notre", "à notre domicile"], [p + "Livrer", "A livrer (frais à la charge du client)"], [p + "Relais", "en relais colis"], [p + "Votre", "au domicile du client"]])
-    : dCoches([[p + "Chercher", "A venir chercher"], [p + "Mairie", "à la mairie"], [p + "Notre", "à notre domicile"], [p + "Relais", "A livrer en relais colis"], [p + "Votre", "A livrer au domicile du client"]]);
-  if (liv.length) l.push("Livraison : " + liv.join(", "));
-  if (dV(p + "Recep")) l.push("Date de réception souhaitée : " + dV(p + "Recep"));
-  var reg = dCoches([[p + "Acompte", "Acompte de 30%" + (dV(p + "AcompteMt") ? " soit " + dV(p + "AcompteMt") : "")], [p + "Place", "Réglé sur place"], [p + "Cb", "Carte bleue"], [p + "Esp", "Espèce"], [p + "Vir", "Virement"]]);
-  if (reg.length) l.push("Règlement : " + reg.join(", "));
-}
 function composerDemande(n) {
   var l = [], erreur = "", client = "", genre = "commande";
   if (n === 1) {
     if (!dC("d1Devis") && !dC("d1Commande")) erreur = "Coche « Devis » ou « Commande » en haut du formulaire.";
     genre = dC("d1Devis") ? "devis" : "commande";
-    l.push((genre === "devis" ? "DEMANDE DE DEVIS" : "DEMANDE DE COMMANDE") + (dV("d1Date") ? " du " + dV("d1Date") : ""));
-    client = dV("d1Societe") || (dV("d1Prenom") + " " + dV("d1Nom")).trim();
-    if (dV("d1Societe")) l.push("Société : " + dV("d1Societe") + (dV("d1Siret") ? " · SIRET " + dV("d1Siret") : ""));
-    dLignesCommunes("d1", l);
+    l.push(genre === "devis" ? "DEMANDE DE DEVIS" : "DEMANDE DE COMMANDE");
     var objets = 0;
     for (var i = 1; i <= 4; i++) {
       if (!dV("d1O" + i)) continue;
       objets++;
+      if (objets === 1) client = dV("d1O" + i);
       var dims = [["H", "d1H"], ["L", "d1L"], ["Lg", "d1Lg"], ["Ø", "d1D"]].filter(function (x) { return dV(x[1] + i); })
         .map(function (x) { return x[0] + " " + dV(x[1] + i); }).join(" × ");
       l.push("Objet " + i + " : " + dV("d1O" + i) + (dV("d1Q" + i) ? " · quantité " + dV("d1Q" + i) : "") + (dV("d1C" + i) ? " · couleur " + dV("d1C" + i) : "") + (dims ? " · " + dims + " cm" : ""));
@@ -1084,21 +1045,22 @@ function composerDemande(n) {
     if (!erreur && !objets) erreur = "Décris au moins un objet.";
     var ut = dCoches([["d1Int", "intérieur"], ["d1Ext", "extérieur"]]); if (ut.length) l.push("Utilisation : " + ut.join(", "));
     var doit = dCoches([["d1Uv", "résistant aux U.V."], ["d1Temp", "température extrême"], ["d1Flex", "flexible"], ["d1Sol", "solide"]]); if (doit.length) l.push("L'objet doit être : " + doit.join(", "));
-    dLivraison("d1", l, true);
+    var pl = dCoches([["d1PLisse", "lisse"], ["d1PTexture", "texturé"], ["d1PCarbone", "carbone"]]); if (pl.length) l.push("Plateau : " + pl.join(", "));
+    client = client ? ((genre === "devis" ? "Devis : " : "Commande : ") + client) : "";
   } else {
     l.push("COMMANDE BOULE DE NOËL");
-    client = (dV("d2Prenom") + " " + dV("d2Nom")).trim();
-    dLignesCommunes("d2", l);
     var choix = dCoches([["d2T1", "1 boule tournante (4 €)"], ["d2T5", "5 boules tournantes (15 €)"], ["d2S1", "1 boule statique (2,5 €)"], ["d2S5", "5 boules statiques (10 €)"]]);
     if (!erreur && !choix.length) erreur = "Coche au moins une formule (1 ou 5 boules).";
     if (choix.length) l.push("Formule : " + choix.join(", "));
+    var prenoms = [];
     for (var j = 1; j <= 5; j++) {
       var cou = dCoches([["d2Or" + j, "or"], ["d2Bl" + j, "blanc"], ["d2Ro" + j, "rouge"], ["d2Ve" + j, "vert"]]);
+      if (dV("d2P" + j)) prenoms.push(dV("d2P" + j));
       if (dV("d2P" + j) || cou.length) l.push("Boule " + j + " : " + (dV("d2P" + j) || "(sans prénom)") + (cou.length ? " · " + cou.join(", ") : ""));
     }
-    dLivraison("d2", l, false);
+    client = "Boules de Noël" + (prenoms.length ? " : " + prenoms.join(", ") : "");
   }
-  if (!erreur && !client) erreur = "Indique au moins le nom.";
+  client = client.slice(0, 80);
   var texte = l.join("\n");
   if (!erreur && texte.length > 2400) erreur = "Le texte est trop long : raccourcis un peu les descriptions.";
   return {erreur: erreur, client: client, genre: genre, texte: texte};
