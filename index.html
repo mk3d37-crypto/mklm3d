@@ -46,7 +46,7 @@ body.lecture .seulement-lecture{display:block}
 @media (min-width:900px){
 :root{--larg:min(100vw,max(50vw,560px))}
 body{max-width:var(--larg);margin-left:auto;margin-right:auto;box-sizing:border-box}
-html body .plein,html body #fRepos,html body #camera{inset:0 auto 0 50%;width:var(--larg);margin-left:calc(var(--larg) / -2);box-sizing:border-box}
+html body .plein,html body #fRepos,html body #fImp,html body #camera{inset:0 auto 0 50%;width:var(--larg);margin-left:calc(var(--larg) / -2);box-sizing:border-box}
 }
 body.lecture .modif{display:none!important}
 .lect{display:none;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--jaune);border:1px solid var(--jaune);border-radius:999px;padding:2px 8px;margin-left:8px;vertical-align:middle}
@@ -105,6 +105,16 @@ padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-ins
 #fRepos{position:fixed;inset:0;background:var(--fond);z-index:11;display:none;overflow:auto;
 padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
 #fRepos.ouvert{display:block}
+#fImp{position:fixed;inset:0;background:var(--fond);z-index:11;display:none;overflow:auto;padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+#fImp.ouvert{display:block}
+#fImp .tete{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+#fImp .tete b{font-size:17px;letter-spacing:.06em}
+#fImp .cmd{background:var(--panneau);border:1px solid #1f2a3a;border-left:4px solid var(--c,#22D3EE);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+#fImp .cmd .nom{font-weight:700;font-size:16px}
+#fImp .cmd .q{color:var(--doux);font-size:13px;margin-top:3px}
+#fImp .cmd .ens{color:#FF9F1C;font-weight:700;font-size:13px;margin-top:6px}
+#fImp .cmd .d{font-size:13px;margin-top:6px;white-space:pre-line;line-height:1.45}
+body.lecture #bImp{display:none!important}
 #fRepos .tete{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 #fRepos .tete b{font-size:17px;letter-spacing:.06em}
 #fRepos label{display:block;font-size:13px;color:var(--doux);margin:14px 0 6px}
@@ -199,7 +209,7 @@ label.photo input{display:none}
 <div id="alerte"></div>
 <button class="grosbouton seulement-lecture" id="bDemande" style="margin:0 0 12px;border-color:var(--ok)" onclick="ouvrirDemande()">✎ Demande de commande</button>
 <div id="contenu"></div>
-<p class="bas"><button id="bFil" onclick="ouvrirFil()">◎ Filaments</button><button id="bProd" onclick="ouvrirProd()">◫ Produits</button><button id="bRepos" onclick="ouvrirRepos()">☾ Repos</button><button id="bouton" onclick="actualiser()">Actualiser</button></p>
+<p class="bas"><button id="bFil" onclick="ouvrirFil()">◎ Filaments</button><button id="bProd" onclick="ouvrirProd()">◫ Produits</button><button id="bImp" onclick="ouvrirImp()">▤ À imprimer<span id="bImpN"></span></button><button id="bRepos" onclick="ouvrirRepos()">☾ Repos</button><button id="bouton" onclick="actualiser()">Actualiser</button></p>
 <div id="fDem" class="plein"><div class="tete"><b>✎ Demande de commande</b><button onclick="fermerDemande()">Fermer</button></div>
 <div id="demOk" style="display:none"></div>
 <div id="demChoix" class="choix"><div class="aide">Quel formulaire veux-tu remplir ?</div>
@@ -276,6 +286,7 @@ label.photo input{display:none}
 <div id="cBobBloc"><label for="cBobine" class="aide" style="display:block;margin-top:14px">Pour quelle bobine ?</label><select id="cBobine"></select></div>
 <div id="cErreur" style="color:#ffb3c0;font-size:13px;margin-top:8px"></div>
 <button class="grosbouton ok" id="cOk" onclick="envoyerCouleur()">Envoyer la couleur au PC</button></div>
+<div id="fImp"><div class="tete"><b>▤ À imprimer</b><button onclick="fermerImp()">Fermer</button></div><div id="impListe"></div></div>
 <div id="fRepos"><div class="tete"><b>☾ Jour de repos</b><button onclick="fermerRepos()">Fermer</button></div>
 <div class="aide">Comme sur le PC : aucun devis ni aucune tâche n'est planifié ces jours-là.</div>
 <div class="modif"><label for="rDu">Du</label><input type="date" id="rDu">
@@ -295,7 +306,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "26.11 q";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "26.11 r";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -330,6 +341,7 @@ function dessiner(nouveau) {
       'Sur le PC : Carnet → Réglages → Carnet mobile (iPhone)… puis scanne le QR code avec l\'iPhone.</p>';
     document.getElementById("bouton").style.display = "none";
     document.getElementById("bRepos").style.display = "none";
+    document.getElementById("bImp").style.display = "none";
     document.getElementById("bFil").style.display = "none";
     document.getElementById("bProd").style.display = "none";
     return;
@@ -382,8 +394,11 @@ function dessiner(nouveau) {
         (j.taches.length ? j.taches.map(tache).join("") : ((r || mj.length) ? "" : '<div class="vide">rien de prévu</div>'));
     }).join("");
   }
+  var nImp = (e.a_imprimer || []).length;
+  document.getElementById("bImpN").textContent = nImp ? " (" + nImp + ")" : "";
   document.getElementById("contenu").innerHTML = h;
   if (nouveau) {
+    if (document.getElementById("fImp").className === "ouvert") listeImp();
     if (estOuvert("fRepos")) listeRepos();
     if (estOuvert("fFil")) listeFil();
     if (estOuvert("fProd")) listeProd();
@@ -395,6 +410,17 @@ function estOuvert(id) { return / ?ouvert$/.test(document.getElementById(id).cla
 // ---------- Filaments, produits, couleur d'une bobine
 function fermer(id) { document.getElementById(id).className = "plein"; }
 function ouvrir(id) { document.getElementById(id).className = "plein ouvert"; }
+function listeImp() {
+  var l = (ETAT && ETAT.a_imprimer) || [];
+  document.getElementById("impListe").innerHTML = l.length ? l.map(function (c) {
+    return '<div class="cmd" style="--c:' + esc(c.couleur || "#22D3EE") + '"><div class="nom">' + esc(c.client) + '</div>' +
+      '<div class="q">' + esc(c.machine || "Imprimante à choisir") + (c.quand ? " · " + esc(c.quand) : "") + '</div>' +
+      (c.ensemble ? '<div class="ens">ENSEMBLE : ' + esc(c.ensemble) + '</div>' : "") +
+      (c.description ? '<div class="d">' + esc(c.description) + '</div>' : "") + '</div>';
+  }).join("") : '<div class="aide">Rien à imprimer pour le moment.</div>';
+}
+function ouvrirImp() { if (!CONFIG || LECTURE) return; listeImp(); document.getElementById("fImp").className = "ouvert"; }
+function fermerImp() { document.getElementById("fImp").className = ""; }
 function ouvrirFil() { if (!CONFIG) return; listeFil(); montrerEnvoyes(); ouvrir("fFil"); }
 // « À facturer » : la liste des commandes livrées ; on coche ce qui est payé (comme sur le PC).
 var PAYES = {}, FACT_COCHES = {};
