@@ -295,7 +295,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "26.11 p";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "26.11 q";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -1060,9 +1060,10 @@ function construireDemande() {
   var b = '<h2 style="text-align:center;font-size:15px;letter-spacing:.04em;color:var(--texte);text-transform:none">Commande boule de Noël</h2>' +
     '<div class="bloc"><h3>Description de l\'objet</h3>' +
     '<div class="cases">' + dCase("d2T1", "1 Boule de Noël Tournante = 4 €") + '</div><div class="cases">' + dCase("d2T5", "5 Boules de Noël Tournante = 15 €") + '</div>' +
-    '<div class="cases">' + dCase("d2S1", "1 Boule de Noël Statique = 2,5 €") + '</div><div class="cases">' + dCase("d2S5", "5 Boules de Noël Statique = 10 €") + '</div>';
+    '<div class="cases">' + dCase("d2S1", "1 Boule de Noël Statique = 2,5 €") + '</div><div class="cases">' + dCase("d2S5", "5 Boules de Noël Statique = 10 €") + '</div>' +
+    '<div id="d2Total" style="margin:14px 0 4px;padding:10px 12px;border:1px solid var(--accent);border-radius:10px;font-weight:700">Quantité totale : <span id="d2TotalN">0</span> boule(s)</div>';
   for (var j = 1; j <= 5; j++) {
-    b += '<div class="obj">' + dChamp("d2P" + j, "Prénoms") + '<label class="l">Couleur :</label><div class="cases">' + dCase("d2Or" + j, "Or") + dCase("d2Bl" + j, "Blanc") + dCase("d2Ro" + j, "Rouge") + dCase("d2Ve" + j, "Vert") + '</div></div>';
+    b += '<div class="obj">' + dChamp("d2P" + j, "Prénoms") + '<label class="l">Couleur :</label><div class="cases">' + dCase("d2Or" + j, "Or") + dCase("d2Bl" + j, "Blanc") + dCase("d2Ro" + j, "Rouge") + dCase("d2Ve" + j, "Vert") + '</div>' + dChamp("d2Q" + j, "Quantité souhaitée", "number").replace("<input ", '<input min="0" max="99" inputmode="numeric" oninput="majTotalBoules()" ') + '</div>';
   }
   b += '</div>' + dEnsemble(2) +
     '<div id="demMsg2" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn2" onclick="envoyerDemande(2)">Envoyer la demande</button>' +
@@ -1098,6 +1099,7 @@ function choisirDemande(n) {
   appliquerEns();
   document.getElementById("fDem").scrollTop = 0;
 }
+function majTotalBoules() { var t = 0; for (var j = 1; j <= 5; j++) { t += Math.max(0, parseInt(dV("d2Q" + j), 10) || 0); } document.getElementById("d2TotalN").textContent = t; }
 function dV(id) { var e = document.getElementById(id); return e ? e.value.trim() : ""; }
 function dC(id) { var e = document.getElementById(id); return !!(e && e.checked); }
 function dCoches(liste) { return liste.filter(function (x) { return dC(x[0]); }).map(function (x) { return x[1]; }); }
@@ -1128,12 +1130,15 @@ function composerDemande(n) {
     var choix = dCoches([["d2T1", "1 boule tournante (4 €)"], ["d2T5", "5 boules tournantes (15 €)"], ["d2S1", "1 boule statique (2,5 €)"], ["d2S5", "5 boules statiques (10 €)"]]);
     if (!erreur && !choix.length) erreur = "Coche au moins une formule (1 ou 5 boules).";
     if (choix.length) l.push("Formule : " + choix.join(", "));
-    var prenoms = [];
+    var prenoms = [], qtot = 0;
     for (var j = 1; j <= 5; j++) {
       var cou = dCoches([["d2Or" + j, "or"], ["d2Bl" + j, "blanc"], ["d2Ro" + j, "rouge"], ["d2Ve" + j, "vert"]]);
       if (dV("d2P" + j)) prenoms.push(dV("d2P" + j));
-      if (dV("d2P" + j) || cou.length) l.push("Boule " + j + " : " + (dV("d2P" + j) || "(sans prénom)") + (cou.length ? " · " + cou.join(", ") : ""));
+      var qj = Math.max(0, Math.min(99, parseInt(dV("d2Q" + j), 10) || 0));
+      qtot += qj;
+      if (dV("d2P" + j) || cou.length || qj) l.push("Boule " + j + " : " + (dV("d2P" + j) || "(sans prénom)") + (cou.length ? " · " + cou.join(", ") : "") + (qj ? " · quantité " + qj : ""));
     }
+    if (qtot) l.push("Quantité totale : " + qtot);
     client = "Boules de Noël" + (prenoms.length ? " : " + prenoms.join(", ") : "");
   }
   client = client.slice(0, 80);
