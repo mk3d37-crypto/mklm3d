@@ -306,7 +306,7 @@ label.photo input{display:none}
 // qui est dans le lien de l'icône (après le #, cette partie n'est jamais envoyée à GitHub).
 var CONFIG = lireConfig();
 var ETAT = null, LU = null;
-var VERSION_PAGE = "26.11 r";     // montrée en haut à droite : pour vérifier que c'est la bonne page
+var VERSION_PAGE = "26.11 s";     // montrée en haut à droite : pour vérifier que c'est la bonne page
 var LECTURE = false;              // lien consultation (clé « lecture seule ») : on regarde, on ne modifie rien
 
 function lireConfig() {
@@ -1069,7 +1069,7 @@ function annulerEnsemble() {
   });
 }
 function construireDemande() {
-  var a = '<div class="cases">' + dCase("d1Devis", "Devis") + dCase("d1Commande", "Commande") + '</div>' +
+  var a = dEnsemble(1) + '<div class="cases">' + dCase("d1Devis", "Devis") + dCase("d1Commande", "Commande") + '</div>' +
     '<div class="bloc"><h3>Description de l\'objet</h3>';
   for (var i = 1; i <= 4; i++) {
     a += '<div class="obj">' + dChamp("d1O" + i, "Objet " + i) + '<div class="deux2"><div>' + dChamp("d1Q" + i, "Quantité", "number") + '</div><div>' + dChamp("d1C" + i, "Couleur") + '</div></div>' +
@@ -1080,10 +1080,10 @@ function construireDemande() {
     '<label class="l">L\'objet doit être</label><div class="cases">' + dCase("d1Uv", "Résistant aux U.V.") + dCase("d1Temp", "Température extrême") + dCase("d1Flex", "Flexible") + dCase("d1Sol", "Solide") + '</div>' +
     '<label class="l">Plateau d\'impression</label><div class="cases">' + dCase("d1PLisse", "Plateau lisse") + dCase("d1PTexture", "Plateau texturé") + dCase("d1PCarbone", "Plateau carbone") + '</div>' +
     '<label class="l">Qualité d\'impression (obligatoire)</label><div class="cases">' + dCase("d1QNormale", "Qualité normale") + dCase("d1QSup", "Qualité supérieure") + dCase("d1QExtreme", "Qualité extrême") + '</div></div>' +
-    dEnsemble(1) + '<div id="demMsg1" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn1" onclick="envoyerDemande(1)">Envoyer la demande</button>' +
+    '<div id="demMsg1" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn1" onclick="envoyerDemande(1)">Envoyer la demande</button>' +
     '<button class="grosbouton" onclick="retourDemande()">Retour</button>';
   document.getElementById("demF1").innerHTML = a;
-  var b = '<h2 style="text-align:center;font-size:15px;letter-spacing:.04em;color:var(--texte);text-transform:none">Commande boule de Noël</h2>' +
+  var b = '<h2 style="text-align:center;font-size:15px;letter-spacing:.04em;color:var(--texte);text-transform:none">Commande boule de Noël</h2>' + dEnsemble(2) +
     '<div class="bloc"><h3>Description de l\'objet</h3>' +
     '<div class="cases">' + dCase("d2T1", "1 Boule de Noël Tournante = 4 €") + '</div><div class="cases">' + dCase("d2T5", "5 Boules de Noël Tournante = 15 €") + '</div>' +
     '<div class="cases">' + dCase("d2S1", "1 Boule de Noël Statique = 2,5 €") + '</div><div class="cases">' + dCase("d2S5", "5 Boules de Noël Statique = 10 €") + '</div>' +
@@ -1091,7 +1091,7 @@ function construireDemande() {
   for (var j = 1; j <= 5; j++) {
     b += '<div class="obj">' + dChamp("d2P" + j, "Prénoms") + '<label class="l">Couleur :</label><div class="cases">' + dCase("d2Or" + j, "Or") + dCase("d2Bl" + j, "Blanc") + dCase("d2Ro" + j, "Rouge") + dCase("d2Ve" + j, "Vert") + '</div>' + dChamp("d2Q" + j, "Quantité souhaitée", "number").replace("<input ", '<input min="0" max="99" inputmode="numeric" oninput="majTotalBoules()" ') + '</div>';
   }
-  b += '</div>' + dEnsemble(2) +
+  b += '</div>' +
     '<div id="demMsg2" class="msg" style="color:#ffb3c0;font-size:13px"></div><button class="grosbouton ok" id="demBtn2" onclick="envoyerDemande(2)">Envoyer la demande</button>' +
     '<button class="grosbouton" onclick="retourDemande()">Retour</button>';
   document.getElementById("demF2").innerHTML = b;
